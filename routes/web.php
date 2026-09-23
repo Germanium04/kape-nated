@@ -3,7 +3,20 @@
 use App\Support\DemoData;
 use Illuminate\Support\Facades\Route;
 
+// Public Routes
+Route::get('/', fn() => view('layouts.authentication.Login'))->name('authentication.login');
 
+Route::get('/signup', function () {
+    return view('layouts.authentication.Signup');
+ })->name('authentication.signup');
+
+Route::post('/signup', function () {
+    return redirect()->route('authentication.login');
+})->name('authentication.signup.submit');
+
+
+
+// Admin Routes
 Route::prefix('admin')->name('admin.')->group(function () {
 
     Route::redirect('/', '/admin/dashboard');

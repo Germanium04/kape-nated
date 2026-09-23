@@ -1,5 +1,5 @@
 @props([
-    'title'      => 'Admin',
+    'title'      => 'Staff',
     'heading'    => null,
     'subheading' => null,
 ])
@@ -20,21 +20,19 @@
 <body>
 
 <header class="topbar">
-    <a href="{{ route('admin.dashboard') }}" class="brand">
+    <a href="{{ route('staff.dashboard') }}" class="brand">
         kape&#8209;nated<span class="brand-bean">&#9679;</span>
     </a>
 
     <nav class="topnav">
-        <a href="{{ route('admin.dashboard') }}" class="{{ request()->routeIs('admin.dashboard') ? 'is-current' : '' }}">Dashboard</a>
-        <a href="{{ route('admin.receipts') }}"  class="{{ request()->routeIs('admin.receipts')  ? 'is-current' : '' }}">Receipts</a>
-        <a href="{{ route('admin.sales') }}"     class="{{ request()->routeIs('admin.sales')     ? 'is-current' : '' }}">Sales</a>
-        <a href="{{ route('admin.menu') }}"      class="{{ request()->routeIs('admin.menu')      ? 'is-current' : '' }}">Menu</a>
-        <a href="{{ route('admin.inventory') }}" class="{{ request()->routeIs('admin.inventory') ? 'is-current' : '' }}">Inventory</a>
+        <a href="{{ route('staff.dashboard') }}" class="{{ request()->routeIs('staff.dashboard') ? 'is-current' : '' }}">Dashboard</a>
+        <a href="{{ route('staff.receipts') }}"  class="{{ request()->routeIs('staff.orders')  ? 'is-current' : '' }}">Orders</a>
+        <a href="{{ route('staff.inventory') }}" class="{{ request()->routeIs('staff.inventory') ? 'is-current' : '' }}">Inventory</a>
     </nav>
 
     <div class="topbar-user" id="userMenu">
         <button type="button" class="user-trigger" id="userMenuBtn" aria-haspopup="true" aria-expanded="false">
-            <span class="user-role">Admin</span>
+            <span class="user-role">Staff</span>
             <span class="avatar" aria-hidden="true"></span>
         </button>
 
@@ -52,7 +50,7 @@
         --}}
         <div class="user-dropdown" id="userDropdown" hidden>
             <div class="user-dropdown-head">
-                <strong>Admin</strong>
+                <strong>Staff</strong>
                 <span class="muted">Prototype account — no login wired up yet</span>
             </div>
 

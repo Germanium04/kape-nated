@@ -1,8 +1,3 @@
-/* ==========================================================================
-   kape-nated — admin prototype
-   Palette and hard outlines follow the staff terminal mockup:
-   dark roast bar, caramel buttons, thin espresso outlines on cream.
-   ========================================================================== */
 
 :root {
     --bar:        #2b1a11;
@@ -25,11 +20,6 @@
 
 * { box-sizing: border-box; }
 
-/* Browsers hide [hidden] elements automatically — but any class below that sets
-   its own `display` (`.modal`, `.stat-row`, etc.) overrides that default, because
-   author CSS always wins over the browser's built-in styles. Without this rule,
-   JS can set `hidden` on a modal or an inactive tab panel and nothing happens
-   visually. This one line is what actually makes hidden work everywhere. */
 [hidden] { display: none !important; }
 
 html { -webkit-text-size-adjust: 100%; }

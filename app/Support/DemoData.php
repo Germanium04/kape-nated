@@ -187,4 +187,17 @@ class DemoData
             ['name' => 'Strawberry Frappe', 'sold' => 37, 'revenue' => 6105],
         ];
     }
+
+    // public static function signup(string $fname, string $lname, string $contact, string $branch, string $password): array
+    // {
+    //     $user = [
+    //         'name' => $fname . ' ' . $lname,
+    //         'contact' => $contact,
+    //         'branch' => $branch,
+    //         'password' => $password,
+    //     ];
+
+    //     return $user;
+    // }
+
 }
