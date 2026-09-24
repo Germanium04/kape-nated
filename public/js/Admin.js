@@ -416,7 +416,6 @@ function initInventory() {
                         <span class="badge badge--${status(i).tone}">${status(i).label}</span>
                     </li>`).join('')}
                 </ul>
-                <button type="button" class="btn btn--primary" data-open-modal="stockIn">Add stock</button>
             </div>
         </section>`;
     }

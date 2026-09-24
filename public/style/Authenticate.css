@@ -1,4 +1,3 @@
-
 :root {
     --bar:        #2b1a11;
     --ink:        #26180f;
@@ -22,11 +21,16 @@
 
 [hidden] { display: none !important; }
 
-html { -webkit-text-size-adjust: 100%; }
+html { -webkit-text-size-adjust: 100%; height: 100%; }
 
 body {
     margin: 0;
+    min-height: 100%;
     background: var(--cream);
+    /* Near-white on purpose: everything visible sits inside the dark .auth-form
+       card below, so this is "default text color for a dark background," not
+       a mistake — it just reuses the --card token as a color instead of a
+       background fill. */
     color: var(--card);
     font-family: 'Karla', system-ui, sans-serif;
     font-size: 15px;
@@ -42,34 +46,41 @@ h1, h2, h3, .brand, .stat-value {
     margin: 0;
 }
 
-h2 { font-weight:bold; font-size: 26px; }
-p { color: var(--line-soft)}
+h2 { font-weight: bold; font-size: 26px; }
+p { color: var(--line-soft); }
 label { color: var(--cream); }
 
-.auth-login, .auth-signup {
-    margin: 10% 0;
+/* ---------- page shell: centers the card at any screen height ---------- */
+.auth-login,
+.auth-signup {
+    min-height: 100vh;
     display: flex;
-    flex-direction: column;
-    gap: 50px;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 16px;
 }
-.auth-login{ margin: 20% 0;}
-.auth-signup{ margin: 7% 0;}
 
 .auth-form {
-    min-width: 45%;
-    max-width: 65%;
+    width: 100%;
     margin: 0 auto;
-    border:#26180f 1px solid;
+    border: 1px solid var(--ink);
     background: var(--bar);
     border-radius: 10px;
-    padding: 50px;
+    padding: 44px 40px;
     display: flex;
     flex-direction: column;
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.788);
 }
 
+/* A fixed cap in pixels, not a percentage of the viewport — a percentage
+   width means the card is oddly narrow on a phone and absurdly wide on a
+   large monitor. Signup gets a bit more room since it holds more fields. */
+.auth-login  .auth-form { max-width: 400px; }
+.auth-signup .auth-form { max-width: 480px; }
+
 .auth-title, .auth-header {
     text-align: center;
+    margin-bottom: 8px;
 }
 
 /* ---------- form elements ---------- */
@@ -86,6 +97,14 @@ label { color: var(--cream); }
     color: var(--tan-pale);
 }
 
+/* Pairs two fields side by side on wider screens (First/Last name, Username/
+   Contact); the 480px breakpoint below stacks them back to one column. */
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 14px;
+}
+
 .field {
     width: 100%;
     padding: 10px 12px;
@@ -94,7 +113,9 @@ label { color: var(--cream); }
     background: var(--card);
     color: var(--ink);
     font-family: 'Karla', system-ui, sans-serif;
-    font-size: 15px;
+    /* 16px, not 15 — anything under 16px makes iOS Safari auto-zoom the page
+       when the field is tapped, which is jarring on a login form. */
+    font-size: 16px;
 }
 
 .field:focus {
@@ -123,9 +144,7 @@ label { color: var(--cream); }
     color: var(--card);
 }
 
-.btn--primary:hover {
-    background: var(--tan);
-}
+.btn--primary:hover { background: var(--tan); }
 
 .auth-footer {
     text-align: center;
@@ -141,18 +160,20 @@ label { color: var(--cream); }
 }
 
 /* ---------- responsive ---------- */
-@media (max-width: 960px) {
-    .stat-row { grid-template-columns: repeat(2, 1fr); }
-    .grid-2 { grid-template-columns: 1fr; }
-}
+@media (max-width: 480px) {
+    .auth-login,
+    .auth-signup {
+        padding: 24px 14px;
+    }
 
-@media (max-width: 640px) {
-    .page { padding: 18px 14px 48px; }
-    .page-head h1 { font-size: 24px; }
-    .stat-row { grid-template-columns: 1fr; }
-    .panel-tools { width: 100%; }
-    .field { min-width: 0; flex: 1; }
-    .table { display: block; overflow-x: auto; white-space: nowrap; }
-    .form-row { flex-direction: column; align-items: stretch; }
-    .field-group--narrow { max-width: none; }
+    .auth-form {
+        padding: 30px 22px;
+    }
+
+    h2 { font-size: 22px; }
+
+    /* Paired fields drop back to one column so nothing gets squeezed. */
+    .form-row {
+        grid-template-columns: 1fr;
+    }
 }

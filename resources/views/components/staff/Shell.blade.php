@@ -26,7 +26,7 @@
 
     <nav class="topnav">
         <a href="{{ route('staff.dashboard') }}" class="{{ request()->routeIs('staff.dashboard') ? 'is-current' : '' }}">Dashboard</a>
-        <a href="{{ route('staff.receipts') }}"  class="{{ request()->routeIs('staff.orders')  ? 'is-current' : '' }}">Orders</a>
+        <a href="{{ route('staff.orders') }}"  class="{{ request()->routeIs('staff.orders')  ? 'is-current' : '' }}">Orders</a>
         <a href="{{ route('staff.inventory') }}" class="{{ request()->routeIs('staff.inventory') ? 'is-current' : '' }}">Inventory</a>
     </nav>
 
@@ -41,22 +41,18 @@
                 @if(Route::has('profile.edit'))
                     <a href="{{ route('profile.edit') }}" class="user-dropdown-item">Profile</a>
                 @endif
-                @if(Route::has('logout'))
-                    <form method="POST" action="{{ route('authentication.login') }}">
-                        @csrf
-                        <button type="submit" class="user-dropdown-item user-dropdown-item--danger">Log out</button>
-                    </form>
-                @endif
         --}}
         <div class="user-dropdown" id="userDropdown" hidden>
             <div class="user-dropdown-head">
                 <strong>Staff</strong>
-                <span class="muted">Prototype account — no login wired up yet</span>
             </div>
 
             <button type="button" class="user-dropdown-item" id="profilePlaceholder">Profile</button>
-            <button type="button" class="user-dropdown-item user-dropdown-item--danger" id="logoutPlaceholder">Log out</button>
-        </div>
+            <form method="POST" action="{{ route('authentication.logout') }}">
+                @csrf
+                <button type="submit" class="user-dropdown-item user-dropdown-item--danger">Log out</button>
+            </form>
+        </div> 
     </div>
 </header>
 

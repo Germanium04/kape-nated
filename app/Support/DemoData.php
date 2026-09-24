@@ -81,6 +81,36 @@ class DemoData
         return $items;
     }
 
+    public static function drinkTypes(): array
+    {
+        return [
+            'Special Sundaes',
+            'Premium Sundaes',
+            'Iced Coffee Float',
+            'Non-Coffee Float',
+            'Frappe',
+            'Iced Coffee',
+            'Hot Coffee',
+            'Matcha',
+            'Strawberry',
+            'Blueberry',
+            'Pistachio',
+            'Choco',
+            'Flavored Soda',
+            ];
+    }
+
+    public static function customizations(): array
+    {
+        return [
+            ['name' => 'Extra Shot', 'price' => 30],
+            ['name' => 'Syrup',       'price' => 10],
+            ['name' => 'Ice Cream',   'price' => 20],
+            ['name' => 'Popping Boba', 'price' => 15],
+            ['name' => 'Rainbow Jelly', 'price' => 15],
+        ];
+    }
+
     /** The five stalls this admin account oversees. */
     public static function branches(): array
     {

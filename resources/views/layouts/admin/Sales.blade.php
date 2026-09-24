@@ -48,9 +48,7 @@
             </label>
         </div>
         <p class="panel-intro" style="margin-top:10px">
-            Only <strong>13–19 September 2026</strong> is real, recorded data in this prototype — pick a day in that
-            week for exact figures. Anything outside it is a stand-in estimate so the screen still behaves once you
-            connect it to real orders.
+            Only <strong>13–19 September 2026</strong> for now
         </p>
     </x-admin.panel>
 

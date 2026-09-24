@@ -23,10 +23,22 @@
             <input type="text" class="field" id="drinkName" placeholder="e.g. Brown Sugar Latte">
         </label>
 
-        <label class="field-group field-group--narrow">
-            <span>Price (₱)</span>
-            <input type="number" class="field" id="drinkPrice" min="0" step="1" placeholder="150">
-        </label>
+        <div class="field-horizontal">
+            <label class="field-group field-group--narrow field-line field-vertical">
+                <span>Drink type</span>
+                    <select class="field" id="drinkType">
+                        <option value="drinkType">Select a type</option>
+                        @foreach (DemoData::drinkTypes() as $type)
+                            <option value="{{ $type }}">{{ $type }}</option>
+                        @endforeach
+                </select>
+            </label>
+
+            <label class="field-group field-group--narrow field-line field-vertical">
+                <span>Price (₱)</span>
+                <input type="number" class="field" id="drinkPrice" min="0" step="1" placeholder="150">
+            </label>
+        </div>
 
         <h3 class="sub-head">Recipe — how much of each ingredient one cup uses</h3>
         <div class="recipe-fields" id="drinkRecipeFields"></div>

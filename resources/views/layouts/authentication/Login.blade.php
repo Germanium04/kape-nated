@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700&family=Karla:wght@400;500;600;700&display=swap" rel="stylesheet">
+
     <link rel="stylesheet" href="{{ asset('style/Authenticate.css') }}">
 </head>
 <body>
@@ -13,14 +18,14 @@
                 <h2>Welcome to Kape-nated!</h2>
                 <p>Login to your account</p>
             </div>
-            <form method="POST" action="{{ route('admin.dashboard') }}">
+            <form method="POST" action="{{ route('authentication.login.submit') }}">
                 @csrf
                 <div class="form-group">
-                    <label>Username:</label>
-                    <input type="text" class="field" id="username" name="username" required>
+                    <label for="username">Username</label>
+                    <input type="text" class="field" id="username" name="username" required autofocus>
                 </div>
                 <div class="form-group">
-                    <label>Password:</label>
+                    <label for="password">Password</label>
                     <input type="password" class="field" id="password" name="password" required>
                 </div>
                 <button type="submit" class="btn btn--primary">Submit</button>
