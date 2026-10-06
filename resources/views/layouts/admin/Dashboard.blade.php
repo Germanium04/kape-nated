@@ -1,10 +1,9 @@
 @php
-    use App\Support\DemoData;
-
-    $today       = array_values(array_filter($orders, fn ($o) => str_starts_with($o['date'], '2026-09-19')));
-    $salesToday  = array_sum(array_map(fn ($o) => $o['status'] === 'Completed' ? DemoData::total($o) : 0, $today));
+    $todayDate   = \Illuminate\Support\Carbon::today()->format('Y-m-d');
+    $today       = array_values(array_filter($orders, fn ($o) => str_starts_with($o['date'], $todayDate)));
+    $salesToday  = array_sum(array_map(fn ($o) => $o['status'] === 'Completed' ? ($o['total'] ?? 0) : 0, $today));
     $ordersToday = count($today);
-    $avgTicket   = $ordersToday ? $salesToday / $ordersToday : 0;
+    $avgTicket   = $ordersToday > 0 ? $salesToday / $ordersToday : 0;
 
     $lowStock = array_values(array_filter($ingredients, fn ($i) => $i['stock'] <= $i['reorder']));
     $week     = array_sum(array_map(fn ($d) => $d['cash'] + $d['gcash'], $sales));
@@ -43,13 +42,21 @@
     <div class="grid-2">
         <x-admin.panel title="This week" note="₱{{ number_format($week) }} total">
             <div class="chart">
-                @php $max = max(array_map(fn ($d) => $d['cash'] + $d['gcash'], $sales)); @endphp
+                @php 
+                    $rawMax = max(array_merge([0], array_map(fn ($d) => $d['cash'] + $d['gcash'], $sales))); 
+                    $max = $rawMax > 0 ? $rawMax : 1; 
+                @endphp
                 @foreach($sales as $day)
-                    @php $sum = $day['cash'] + $day['gcash']; @endphp
+                    @php 
+                        $sum = $day['cash'] + $day['gcash']; 
+                        $height = round(($sum / $max) * 100);
+                        $gcashHeight = $sum > 0 ? round(($day['gcash'] / $sum) * 100) : 0;
+                        $cashHeight  = $sum > 0 ? round(($day['cash'] / $sum) * 100) : 0;
+                    @endphp
                     <div class="chart-col" title="{{ $day['label'] }}: ₱{{ number_format($sum) }}">
-                        <div class="chart-stack" style="height: {{ round($sum / $max * 100) }}%">
-                            <div class="chart-seg chart-seg--gcash" style="height: {{ round($day['gcash'] / $sum * 100) }}%"></div>
-                            <div class="chart-seg chart-seg--cash"  style="height: {{ round($day['cash'] / $sum * 100) }}%"></div>
+                        <div class="chart-stack" style="height: {{ $height }}%">
+                            <div class="chart-seg chart-seg--gcash" style="height: {{ $gcashHeight }}%"></div>
+                            <div class="chart-seg chart-seg--cash"  style="height: {{ $cashHeight }}%"></div>
                         </div>
                         <span class="chart-label">{{ $day['label'] }}</span>
                     </div>
@@ -84,7 +91,7 @@
                         <td>{{ $order['staff'] }}</td>
                         <td>{{ array_sum(array_column($order['items'], 'qty')) }}</td>
                         <td>{{ $order['payment'] }}</td>
-                        <td class="ta-r mono">₱{{ number_format(DemoData::total($order), 2) }}</td>
+                        <td class="ta-r mono">₱{{ number_format($order['total'], 2) }}</td>
                         <td class="ta-r"><a class="link" href="{{ route('admin.receipts') }}">Receipt</a></td>
                     </tr>
                 @endforeach

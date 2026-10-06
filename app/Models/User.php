@@ -54,6 +54,6 @@ class User extends Authenticatable
 
     public function getNameAttribute(): string
     {
-        return trim("{$this->name}");
+        return trim($this->attributes['name'] ?? '');
     }
 }

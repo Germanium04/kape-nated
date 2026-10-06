@@ -1,79 +1,65 @@
+<x-staff.shell title="Inventory">
 
-<x-staff.shell title="Inventory" heading="Inventory" subheading="Manage your inventory items">
-    <div id="lowStockAlert"></div>
+    <main class="wrap">
 
-    <div class="stat-row" id="inventoryStats"></div>
+        <div class="stat-row--aligned">
+            <x-staff.stat :value="$ingredients->count()" label="Tracked ingredients" />
+            <x-staff.stat 
+                label="Items to reorder" 
+                :value="$lowCount" 
+                :trend="$lowCount ? 'Check the stock room' : null" 
+                :tone="$lowCount ? 'alert' : 'neutral'" 
+            />
+        </div>
 
-    <x-admin.panel title="Stock room" note="On-hand updates as orders are served">
-        <x-slot:tools>
-            <input type="search" class="field" id="stockSearch" placeholder="Search an ingredient">
-            <button type="button" class="btn btn--primary btn--sm" data-open-modal="stockIn">Add stock</button>
-        </x-slot:tools>
 
-        <table class="table" id="stockTable">
-            <thead>
-                <tr>
-                    <th>Ingredient</th>
-                    <th class="ta-r">On hand</th>
-                    <th class="ta-r">Used, this rate</th>
-                    <th class="ta-r">Reorder at</th>
-                    <th class="ta-r">Days left</th>
-                    <th>Status</th>
-                    <th class="ta-r">Stock value</th>
-                </tr>
-            </thead>
-            <tbody><!-- rendered by admin.js --></tbody>
-        </table>
+    <x-staff.page title="Inventory — {{ $branch ?? 'No branch assigned' }}">
 
-    </x-admin.panel>
+        @if(session('status'))
+            <p class="flash">{{ session('status') }}</p>
+        @endif
+        @error('quantity')
+            <p class="flash err">{{ $message }}</p>
+        @enderror
 
-    <x-admin.modal id="stockIn" title="Add stock" size="sm">
-        <p class="panel-intro">Log what you're putting into this branch's stock room. On-hand goes up right away.</p>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Ingredient</th>
+                        <th class="num">On hand</th>
+                        <th class="num">Reorder at</th>
+                        <th class="num">Used today</th>
+                        <th>Status</th>
+                        <th>Restock</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($ingredients as $item)
+                        @php
+                            $trim = fn ($n) => rtrim(rtrim(number_format($n, 2), '0'), '.');
+                            $label = ['ok' => 'Healthy', 'low' => 'Low', 'out' => 'Out of stock'][$item->state];
+                        @endphp
+                        <tr class="{{ $item->state !== 'ok' ? 'low' : '' }}">
+                            <td>{{ $item->name }}</td>
+                            <td class="num">{{ $trim($item->stock) }} {{ $item->unit }}</td>
+                            <td class="num">{{ $trim($item->reorder_level) }} {{ $item->unit }}</td>
+                            <td class="num">{{ $item->used_today > 0 ? $trim($item->used_today).' '.$item->unit : '—' }}</td>
+                            <td><x-staff.badge :tone="$item->state">{{ $label }}</x-staff.badge></td>
+                            <td>
+                                <form method="POST" action="{{ route('staff.inventory.restock', $item->id) }}" class="restock">
+                                    @csrf
+                                    <input type="number" name="quantity" step="0.01" min="0.01" placeholder="Qty" required>
+                                    <button type="submit">Add</button>
+                                </form>
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
 
-        <label class="field-group">
-            <span>Branch</span>
-            <select class="field" id="stockInBranch">
-                @foreach(array_keys(\App\Support\DemoData::branchWeights()) as $branch)
-                    <option value="{{ $branch }}">{{ $branch }}</option>
-                @endforeach
-            </select>
-        </label>
+    </x-staff.page>
+    </main>
 
-        <label class="field-group">
-            <span>Ingredient</span>
-            <select class="field" id="stockInItem"></select>
-        </label>
-
-        <label class="field-group">
-            <span>Quantity added</span>
-            <input type="number" class="field" id="stockInQty" value="1000" min="1">
-        </label>
-
-        <label class="field-group">
-            <span>Note (optional)</span>
-            <input type="text" class="field" id="stockInNote" placeholder="e.g. bought 20 sacks, 20 Sept">
-        </label>
-
-        <x-slot:footer>
-            <button type="button" class="btn btn--ghost" data-close-modal="stockIn">Cancel</button>
-            <button type="button" class="btn btn--primary" id="stockInSave">Add to stock</button>
-        </x-slot:footer>
-    </x-admin.modal>
-
-    @php
-        $ingredients = \App\Support\DemoData::ingredients();
-        $recipes = \App\Support\DemoData::recipes();
-        $branchWeights = \App\Support\DemoData::branchWeights();
-    @endphp
-
-    @push('scripts')
-        <script>
-            window.KAPE = {
-                ingredients:   @json($ingredients),
-                recipes:       @json($recipes),
-                branchWeights: @json($branchWeights),
-            };
-            initInventory();
-        </script>
-    @endpush
 </x-staff.shell>

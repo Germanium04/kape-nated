@@ -2,6 +2,8 @@
 
 use App\Support\DemoData;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\StaffController;
+use App\Http\Controllers\AdminController;
 use Illuminate\Support\Facades\Route;
 
 
@@ -39,108 +41,44 @@ Route::post('/logout', [AuthController::class, 'logout'])
 
 
 // ============================================================
-// ADMIN ROUTES
+// ADMIN ROUTES  (role: admin) — unchanged, still on DemoData
 // ============================================================
 
 Route::prefix('admin')
-    ->name('admin.')
-    ->middleware('auth')
-    ->group(function () {
+        ->name('admin.')
+        ->middleware(['auth', 'role:admin'])
+        ->controller(AdminController::class)
+        ->group(function () {
 
-        Route::redirect('/', '/admin/dashboard');
+            Route::redirect('/', '/admin/dashboard');
 
-
-        // Dashboard
-        Route::get('/dashboard', function () {
-            return view('layouts.admin.Dashboard', [
-                'orders'      => DemoData::orders(),
-                'ingredients' => DemoData::ingredients(),
-                'sales'       => DemoData::salesByDay(),
-                'topItems'    => DemoData::topItems(),
-            ]);
-        })->name('dashboard');
-
-
-        // Receipts
-        Route::get('/receipts', function () {
-            return view('layouts.admin.Receipts', [
-                'orders'   => DemoData::orders(),
-                'branches' => DemoData::branches(),
-            ]);
-        })->name('receipts');
-
-
-        // Sales
-        Route::get('/sales', function () {
-            return view('layouts.admin.Sales', [
-                'sales'    => DemoData::salesByDay(),
-                'topItems' => DemoData::topItems(),
-                'orders'   => DemoData::orders(),
-            ]);
-        })->name('sales');
-
-
-        // Menu
-        Route::get('/menu', function () {
-            return view('layouts.admin.Menu', [
-                'menuItems'   => DemoData::menuItems(),
-                'drinkTypes'  => DemoData::drinkTypes(),
-                'ingredients' => DemoData::ingredients(),
-            ]);
-        })->name('menu');
-
-
-        // Inventory
-        Route::get('/inventory', function () {
-            return view('layouts.admin.Inventory-admin', [
-                'ingredients'  => DemoData::ingredients(),
-                'branchWeights' => DemoData::branchWeights(),
-                'recipes'      => DemoData::recipes(),
-                'addonRecipes' => DemoData::addonRecipes(),
-            ]);
-        })->name('inventory');
-    });
-
+            Route::get('/dashboard', 'dashboard')->name('dashboard');
+            Route::get('/receipts', 'receipts')->name('receipts');
+            Route::get('/sales', 'sales')->name('sales');
+            Route::get('/menu', 'menu')->name('menu');
+            Route::get('/inventory', 'inventory')->name('inventory');
+        });
 
 // ============================================================
-// STAFF ROUTES
+// STAFF ROUTES  (role: staff) — real data, all in StaffController
 // ============================================================
 
 Route::prefix('staff')
     ->name('staff.')
-    ->middleware('auth')
+    ->middleware(['auth', 'role:staff'])
+    ->controller(StaffController::class)
     ->group(function () {
 
-        Route::redirect('/', '/staff/dashboard');
+        Route::redirect('/', '/staff/orders');
 
+        //Dashboard
+        Route::get('/dashboard', 'dashboard')->name('dashboard');
 
-        // Dashboard
-        Route::get('/dashboard', function () {
-            return view('layouts.staff.Dashboard', [
-                'orders'      => DemoData::orders(),
-                'ingredients' => DemoData::ingredients(),
-                'sales'       => DemoData::salesByDay(),
-                'topItems'    => DemoData::topItems(),
-            ]);
-        })->name('dashboard');
+        // Orders: the till screen
+        Route::get('/orders', 'orders')->name('orders');
+        Route::post('/orders', 'storeOrder')->name('orders.store');
 
-
-        // Orders
-        Route::get('/orders', function () {
-            return view('layouts.staff.Order', [
-                'menuItems'      => DemoData::menuItems(),
-                'customizations' => DemoData::customizations(),
-                'ingredients'    => DemoData::ingredients(),
-            ]);
-        })->name('orders');
-
-
-        // Inventory
-        Route::get('/inventory', function () {
-            return view('layouts.staff.Inventory-staff', [
-                'ingredients'  => DemoData::ingredients(),
-                'recipes'      => DemoData::recipes(),
-                'addonRecipes' => DemoData::addonRecipes(),
-            ]);
-        })->name('inventory');
+        // Inventory: stock levels + restock
+        Route::get('/inventory', 'inventory')->name('inventory');
+        Route::post('/inventory/{ingredient}/restock', 'restock')->name('inventory.restock');
     });

@@ -6,7 +6,7 @@
                 <span>Branch</span>
                 <select class="field" id="stockBranch">
                     <option value="all">All branches (combined)</option>
-                    @foreach(array_keys(\App\Support\DemoData::branchWeights()) as $branch)
+                    @foreach(array_keys($branchWeights) as $branch)
                         <option value="{{ $branch }}">{{ $branch }}</option>
                     @endforeach
                 </select>
@@ -40,7 +40,7 @@
         <table class="table" id="stockTable">
             <thead>
                 <tr>
-                    <th>Ingredient</th>
+                    <th >Ingredient</th>
                     <th class="ta-r">On hand</th>
                     <th class="ta-r">Used, this rate</th>
                     <th class="ta-r">Reorder at</th>
@@ -64,7 +64,7 @@
         <label class="field-group">
             <span>Branch</span>
             <select class="field" id="stockInBranch">
-                @foreach(array_keys(\App\Support\DemoData::branchWeights()) as $branch)
+                @foreach(array_keys($branchWeights) as $branch)
                     <option value="{{ $branch }}">{{ $branch }}</option>
                 @endforeach
             </select>
@@ -92,9 +92,9 @@
     </x-admin.modal>
 
     @php
-        $ingredients = \App\Support\DemoData::ingredients();
-        $recipes = \App\Support\DemoData::recipes();
-        $branchWeights = \App\Support\DemoData::branchWeights();
+        $ingredients = $ingredients;
+        $recipes = $recipes;
+        $branchWeights = $branchWeights;
     @endphp
 
     @push('scripts')

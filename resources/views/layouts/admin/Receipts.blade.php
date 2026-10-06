@@ -87,7 +87,7 @@
                         <td class="cell-items">{{ $count }} &middot; <span class="muted">{{ $names }}</span></td>
                         <td>{{ $order['payment'] }}</td>
                         <td><x-admin.badge :tone="$order['status'] === 'Completed' ? 'ok' : 'out'">{{ $order['status'] }}</x-admin.badge></td>
-                        <td class="ta-r mono">₱{{ number_format(DemoData::total($order), 2) }}</td>
+                        <td class="ta-r mono">₱{{ number_format($order['total'], 2) }}</td>
                         <td class="ta-r"><button type="button" class="btn btn--ghost btn--sm" data-open-modal="receipt-{{ $order['no'] }}">View</button></td>
                     </tr>
                 @endforeach
