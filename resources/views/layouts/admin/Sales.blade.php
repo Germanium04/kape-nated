@@ -6,7 +6,7 @@
     $weekTotal = $cashWeek + $gcashWeek;
 @endphp
 
-<x-admin.shell title="Sales" heading="Sales" subheading="Takings, payment mix, and what's actually moving">
+<x-admin.shell title="Reports" heading="Sales" subheading="Takings, payment mix, and what's actually moving">
 
     <x-admin.panel title="Filter" note="Combine a branch with a range">
         <div class="filter-row">

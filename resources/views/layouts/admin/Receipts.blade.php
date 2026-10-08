@@ -95,6 +95,39 @@
         </table>
 
         <p class="empty-note" id="receiptEmpty" hidden>No transaction matches that branch, range, or search. Widen the filter to see more.</p>
+    <!-- Add this directly below the </table> inside Receipts.blade.php -->
+    <div class="pagination-bar" id="receiptPagination" style="display: flex; align-items: center; justify-content: space-between; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border-color, #e5e5e5); flex-wrap: wrap; gap: 0.5rem;">
+        <span class="muted" id="pageInfo" style="font-size: 0.875rem;">Showing 1-10 of 0 transactions</span>
+        
+        <div style="display: flex; align-items: center; gap: 0.35rem;">
+            <button type="button" class="btn btn--ghost btn--sm" id="prevPageBtn" disabled>Previous</button>
+            
+            <!-- Dynamic Page Numbers Container -->
+            <div id="pageNumbers" style="display: flex; gap: 0.25rem;"></div>
+            
+            <button type="button" class="btn btn--ghost btn--sm" id="nextPageBtn" disabled>Next</button>
+        </div>
+    </div>
+    </x-admin.panel>
+
+    <!-- Insert in Receipts.blade.php above the Transactions panel -->
+    <x-admin.panel title="Cash Drawer Audit" note="Reconcile physical cash counted against system total for the selected date">
+        <div class="filter-row">
+            <label class="field-group">
+                <span>System Cash Takings</span>
+                <input type="text" class="field" id="reconExpected" value="₱0.00" readonly style="font-weight: 600;">
+            </label>
+
+            <label class="field-group">
+                <span>Physical Cash Counted</span>
+                <input type="number" class="field" id="reconActual" placeholder="e.g. 15000" step="0.01">
+            </label>
+
+            <label class="field-group">
+                <span>Variance (Over / Short)</span>
+                <input type="text" class="field" id="reconVariance" value="₱0.00" readonly style="font-weight: 700;">
+            </label>
+        </div>
     </x-admin.panel>
 
     @foreach($orders as $order)

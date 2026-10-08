@@ -16,19 +16,74 @@ use Illuminate\Validation\ValidationException;
  */
 class StaffController extends Controller
 {
+    /**
+     * The two sizes a drink can be sold in, by drink type: [value saved on the order, label shown].
+     * The first uses menu_items.price, the second uses menu_items.price_venti.
+     * Cones are the exception: small cone / giant swirl instead of Grande / Venti.
+     */
+    private const SIZES_DEFAULT = [['grande', 'Grande'], ['venti', 'Venti']];
+    private const SIZES_BY_TYPE = ['Cones' => [['small', 'Small cone'], ['giant', 'Giant swirl']]];
+
+    private function sizeSet(?string $type): array
+    {
+        return self::SIZES_BY_TYPE[$type] ?? self::SIZES_DEFAULT;
+    }
+
     /* ------------------------------ order ------------------------------ */
 
     public function orders(Request $request)
     {
+        // Fetch Menu Items with attributes & category IDs
         $menu = DB::table('menu_items')
             ->leftJoin('drink_types', 'drink_types.id', '=', 'menu_items.drink_type_id')
             ->where('menu_items.is_active', true)
             ->orderBy('menu_items.id')
-            ->get(['menu_items.id', 'menu_items.name', 'menu_items.price', 'drink_types.name as type'])
-            ->map(fn ($m) => ['id' => $m->id, 'name' => $m->name, 'price' => (float) $m->price, 'type' => $m->type ?? 'Other']);
+            ->get([
+                'menu_items.id',
+                'menu_items.name',
+                'menu_items.price',
+                'menu_items.price_venti',
+                'menu_items.has_sizes',
+                'menu_items.has_temperature',
+                'menu_items.drink_type_id',
+                'drink_types.name as type',
+            ])
+            ->map(fn ($m) => [
+                'id'              => $m->id,
+                'name'            => $m->name,
+                'price'           => (float) $m->price,
+                'price_venti'     => $m->price_venti ? (float) $m->price_venti : null,
+                'has_sizes'       => (bool) $m->has_sizes,
+                // [{value,label,price}, ...]  empty when the drink has a single price
+                'sizes'           => $m->has_sizes
+                    ? collect($this->sizeSet($m->type))->map(fn ($s, $i) => [
+                        'value' => $s[0],
+                        'label' => $s[1],
+                        'price' => (float) ($i === 1 && $m->price_venti !== null ? $m->price_venti : $m->price),
+                    ])->values()->all()
+                    : [],
+                'has_temperature' => (bool) $m->has_temperature,
+                'drink_type_id'   => $m->drink_type_id !== null ? (int) $m->drink_type_id : null,
+                'type'            => $m->type ?? 'Other',
+            ]);
 
-        $addons = DB::table('addons')->orderBy('id')->get(['id', 'name', 'price'])
-            ->map(fn ($a) => ['id' => $a->id, 'name' => $a->name, 'price' => (float) $a->price]);
+        // Eagerly map Addons to their allowed Drink Type IDs via addon_drink_type pivot
+        $addonTypeMap = DB::table('addon_drink_type')
+            ->get()
+            ->groupBy('addon_id');
+
+        $addons = DB::table('addons')
+            ->orderBy('id')
+            ->get(['id', 'name', 'price'])
+            ->map(fn ($a) => [
+                'id'             => $a->id,
+                'name'           => $a->name,
+                'price'          => (float) $a->price,
+                // Empty list = not restricted, offered on every drink.
+                'drink_type_ids' => isset($addonTypeMap[$a->id])
+                    ? $addonTypeMap[$a->id]->pluck('drink_type_id')->map(fn ($id) => (int) $id)->values()->all()
+                    : [],
+            ]);
 
         return view('layouts.staff.Order', [
             'menu'   => $menu,
@@ -45,7 +100,8 @@ class StaffController extends Controller
             'items'            => 'required|array|min:1',
             'items.*.id'       => 'required|exists:menu_items,id',
             'items.*.qty'      => 'required|integer|min:1|max:50',
-            'items.*.temp'     => 'required|in:hot,cold',
+            'items.*.size'     => 'nullable|in:grande,venti,small,giant',
+            'items.*.temp'     => 'nullable|in:hot,cold',
             'items.*.addons'   => 'nullable|array',
             'items.*.addons.*' => 'exists:addons,id',
         ]);
@@ -57,10 +113,15 @@ class StaffController extends Controller
 
         $result = DB::transaction(function () use ($data, $user) {
             // Prices and recipes always come from the database, never from the browser.
-            $menu         = DB::table('menu_items')->whereIn('id', array_column($data['items'], 'id'))->get()->keyBy('id');
+            $menu         = DB::table('menu_items')
+                ->leftJoin('drink_types', 'drink_types.id', '=', 'menu_items.drink_type_id')
+                ->whereIn('menu_items.id', array_column($data['items'], 'id'))
+                ->get(['menu_items.*', 'drink_types.name as type_name'])
+                ->keyBy('id');
             $recipes      = DB::table('menu_item_ingredient')->whereIn('menu_item_id', $menu->keys())->get()->groupBy('menu_item_id');
             $addons       = DB::table('addons')->get()->keyBy('id');
             $addonRecipes = DB::table('addon_ingredient')->get()->groupBy('addon_id');
+            $addonTypes   = DB::table('addon_drink_type')->get()->groupBy('addon_id');   // add-on => drink types it may go on
 
             $total = 0;
             $lines = [];
@@ -70,7 +131,27 @@ class StaffController extends Controller
                 $item   = $menu[$row['id']];
                 $picked = collect($row['addons'] ?? [])->unique()->map(fn ($id) => $addons[$id]);
 
-                $total += ($item->price + $picked->sum('price')) * $row['qty'];
+                // Only drinks flagged has_sizes carry a size. The second size (Venti / giant swirl) uses price_venti.
+                $size  = null;
+                $price = $item->price;
+                if ($item->has_sizes) {
+                    $values = array_column($this->sizeSet($item->type_name), 0);
+                    $size   = in_array($row['size'] ?? null, $values, true) ? $row['size'] : $values[0];
+                    if ($size === $values[1] && $item->price_venti !== null) {
+                        $price = $item->price_venti;
+                    }
+                }
+                $temp  = $item->has_temperature ? ($row['temp'] ?? 'cold') : null;
+
+                // An add-on with a drink-type list may only go on those drinks.
+                foreach ($picked as $a) {
+                    $only = $addonTypes[$a->id] ?? null;
+                    if ($only && ! $only->contains('drink_type_id', $item->drink_type_id)) {
+                        throw ValidationException::withMessages(['items' => "{$a->name} can't be added to {$item->name}."]);
+                    }
+                }
+
+                $total += ($price + $picked->sum('price')) * $row['qty'];
 
                 foreach ($recipes[$item->id] ?? [] as $r) {
                     $need[$r->ingredient_id] = ($need[$r->ingredient_id] ?? 0) + $r->quantity * $row['qty'];
@@ -81,7 +162,7 @@ class StaffController extends Controller
                     }
                 }
 
-                $lines[] = ['item' => $item, 'qty' => $row['qty'], 'temp' => $row['temp'], 'addons' => $picked];
+                $lines[] = ['item' => $item, 'qty' => $row['qty'], 'price' => $price, 'size' => $size, 'temp' => $temp, 'addons' => $picked];
             }
 
             // Lock the stock rows, then make sure everything can actually be made.
@@ -104,7 +185,7 @@ class StaffController extends Controller
             foreach ($lines as $l) {
                 $itemId = DB::table('order_items')->insertGetId([
                     'order_id' => $orderId, 'menu_item_id' => $l['item']->id, 'quantity' => $l['qty'],
-                    'unit_price' => $l['item']->price, 'temperature' => $l['temp'],
+                    'unit_price' => $l['price'], 'size' => $l['size'], 'temperature' => $l['temp'],
                     'created_at' => $now, 'updated_at' => $now,
                 ]);
 

@@ -214,7 +214,7 @@
                         <td class="rl-qty">{{ $line->quantity }}&times;</td>
                         <td class="rl-name">
                             {{ $line->name }}
-                            <span class="rl-opt">{{ ucfirst($line->temperature ?? '') }}@if($line->addons->isNotEmpty()), {{ $line->addons->pluck('name')->join(', ') }}@endif</span>
+                            <span class="rl-opt">{{ collect([$line->size ? ucfirst($line->size) : null, $line->temperature ? ucfirst($line->temperature) : null, $line->addons->isNotEmpty() ? $line->addons->pluck('name')->join(', ') : null])->filter()->join(' · ') }}</span>
                         </td>
                         <td class="rl-amt">{{ number_format($line->line_total, 2) }}</td>
                     </tr>

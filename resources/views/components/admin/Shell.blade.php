@@ -27,7 +27,7 @@
     <nav class="topnav">
         <a href="{{ route('admin.dashboard') }}" class="{{ request()->routeIs('admin.dashboard') ? 'is-current' : '' }}">Dashboard</a>
         <a href="{{ route('admin.receipts') }}"  class="{{ request()->routeIs('admin.receipts')  ? 'is-current' : '' }}">Receipts</a>
-        <a href="{{ route('admin.sales') }}"     class="{{ request()->routeIs('admin.sales')     ? 'is-current' : '' }}">Sales</a>
+        <a href="{{ route('admin.sales') }}"     class="{{ request()->routeIs('admin.sales')     ? 'is-current' : '' }}">Reports</a>
         <a href="{{ route('admin.menu') }}"      class="{{ request()->routeIs('admin.menu')      ? 'is-current' : '' }}">Menu</a>
         <a href="{{ route('admin.inventory') }}" class="{{ request()->routeIs('admin.inventory') ? 'is-current' : '' }}">Inventory</a>
     </nav>

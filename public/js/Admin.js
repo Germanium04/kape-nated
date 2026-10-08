@@ -66,7 +66,9 @@ document.addEventListener('keydown', (e) => {
     document.body.classList.remove('is-locked');
 });
 
-/* ---------- receipts: branch, payment, range, and search ---------- */
+/* ---------- receipts: branch, payment, range, search, and cash audit ---------- */
+/* ---------- receipts: branch, payment, range, search, cash audit & numbered pagination ---------- */
+/* ---------- receipts: branch, payment, range, search, cash audit & numbered pagination ---------- */
 (function receipts() {
     const table = document.getElementById('receiptTable');
     if (!table) return;
@@ -81,6 +83,21 @@ document.addEventListener('keydown', (e) => {
     const empty = document.getElementById('receiptEmpty');
     const summary = document.getElementById('receiptSummary');
     const rows = Array.from(table.tBodies[0].rows);
+
+    // Cash Drawer Audit Elements
+    const reconExpected = document.getElementById('reconExpected');
+    const reconActual = document.getElementById('reconActual');
+    const reconVariance = document.getElementById('reconVariance');
+
+    // Pagination Elements
+    const prevBtn = document.getElementById('prevPageBtn');
+    const nextBtn = document.getElementById('nextPageBtn');
+    const pageNumbers = document.getElementById('pageNumbers');
+    const pageInfo = document.getElementById('pageInfo');
+    const paginationBar = document.getElementById('receiptPagination');
+
+    const pageSize = 10;
+    let currentPage = 1;
 
     const wraps = {
         day: document.getElementById('rangeDayWrap'),
@@ -97,42 +114,167 @@ document.addEventListener('keydown', (e) => {
         return true;
     }
 
+    function calculateCashVariance(expectedCash) {
+        if (!reconVariance) return;
+
+        if (!reconActual || reconActual.value === '') {
+            reconVariance.value = '₱0.00';
+            reconVariance.style.color = 'inherit';
+            return;
+        }
+
+        const actualCash = parseFloat(reconActual.value) || 0;
+        const variance = actualCash - expectedCash;
+        const prefix = variance > 0 ? '+' : '';
+
+        reconVariance.value = prefix + '₱' + variance.toLocaleString('en-PH', { 
+            minimumFractionDigits: 2, 
+            maximumFractionDigits: 2 
+        });
+
+        reconVariance.style.color = variance < 0 ? '#a63d2a' : (variance > 0 ? '#46703f' : 'inherit');
+    }
+
+    function renderPageNumbers(totalPages) {
+        if (!pageNumbers) return;
+        pageNumbers.innerHTML = '';
+
+        if (totalPages <= 1) return;
+
+        // Build list of page numbers with ellipsis (...) logic
+        let pages = [];
+        for (let i = 1; i <= totalPages; i++) {
+            if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
+                pages.push(i);
+            } else if (pages[pages.length - 1] !== '...') {
+                pages.push('...');
+            }
+        }
+
+        pages.forEach((p) => {
+            if (p === '...') {
+                const span = document.createElement('span');
+                span.textContent = '…';
+                span.style.cssText = 'padding: 0 0.25rem; align-self: center; color: #888; font-size: 0.85rem;';
+                pageNumbers.appendChild(span);
+            } else {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.textContent = p;
+                btn.className = p === currentPage ? 'btn btn--primary btn--sm' : 'btn btn--ghost btn--sm';
+                btn.style.cssText = 'min-width: 2rem; padding: 0.25rem 0.5rem;';
+                
+                btn.addEventListener('click', () => {
+                    currentPage = p;
+                    apply();
+                });
+
+                pageNumbers.appendChild(btn);
+            }
+        });
+    }
+
     function apply() {
         const term = (search.value || '').trim().toLowerCase();
         const pay = payment.value;
         const br = branch.value;
-        let shown = 0;
+        
+        let matchingRows = [];
         let total = 0;
+        let expectedCash = 0;
 
+        // 1. Filter rows
         rows.forEach((row) => {
             const hit = (!term || row.dataset.search.includes(term)) &&
                         (pay === 'all' || row.dataset.payment === pay) &&
                         (br === 'all' || row.dataset.branch === br) &&
                         matchesRange(row.dataset.date);
-            row.hidden = !hit;
+            
             if (hit) {
-                shown++;
-                const amount = row.querySelector('td.ta-r.mono');
-                if (amount) total += parseFloat(amount.textContent.replace(/[₱,]/g, '')) || 0;
+                matchingRows.push(row);
+                const amountCell = row.querySelector('td.ta-r.mono');
+                const amount = amountCell ? parseFloat(amountCell.textContent.replace(/[₱,]/g, '')) || 0 : 0;
+                
+                total += amount;
+
+                if (row.dataset.payment === 'Cash') {
+                    expectedCash += amount;
+                }
+            } else {
+                row.hidden = true;
             }
         });
 
-        empty.hidden = shown > 0;
-        summary.textContent = shown
-            ? `${shown} transaction${shown === 1 ? '' : 's'} · ₱${total.toLocaleString('en-PH', { minimumFractionDigits: 2 })}`
+        const totalMatching = matchingRows.length;
+        const totalPages = Math.ceil(totalMatching / pageSize) || 1;
+
+        if (currentPage > totalPages) currentPage = 1;
+
+        // 2. Slice visible rows for current page
+        const startIdx = (currentPage - 1) * pageSize;
+        const endIdx = startIdx + pageSize;
+
+        rows.forEach((row) => { row.hidden = true; });
+        matchingRows.slice(startIdx, endIdx).forEach((row) => { row.hidden = false; });
+
+        // 3. Render updates
+        empty.hidden = totalMatching > 0;
+        if (paginationBar) paginationBar.hidden = totalMatching === 0;
+
+        summary.textContent = totalMatching
+            ? `${totalMatching} transaction${totalMatching === 1 ? '' : 's'} · ₱${total.toLocaleString('en-PH', { minimumFractionDigits: 2 })}`
             : '';
+
+        if (pageInfo) {
+            const from = totalMatching ? startIdx + 1 : 0;
+            const to = Math.min(endIdx, totalMatching);
+            pageInfo.textContent = `Showing ${from}–${to} of ${totalMatching} transactions`;
+        }
+
+        if (prevBtn) prevBtn.disabled = currentPage <= 1;
+        if (nextBtn) nextBtn.disabled = currentPage >= totalPages;
+
+        // Render page number buttons
+        renderPageNumbers(totalPages);
+
+        // Update Expected Cash and Variance
+        if (reconExpected) {
+            reconExpected.value = '₱' + expectedCash.toLocaleString('en-PH', { 
+                minimumFractionDigits: 2, 
+                maximumFractionDigits: 2 
+            });
+        }
+
+        calculateCashVariance(expectedCash);
     }
+
+    prevBtn?.addEventListener('click', () => {
+        if (currentPage > 1) {
+            currentPage--;
+            apply();
+        }
+    });
+
+    nextBtn?.addEventListener('click', () => {
+        currentPage++;
+        apply();
+    });
 
     rangeMode.addEventListener('change', () => {
         Object.values(wraps).forEach((w) => { w.hidden = true; });
         if (wraps[rangeMode.value]) wraps[rangeMode.value].hidden = false;
+        currentPage = 1;
         apply();
     });
 
     [search, payment, branch, rangeDay, rangeMonth, rangeYear].forEach((el) => {
-        el.addEventListener('input', apply);
-        el.addEventListener('change', apply);
+        el?.addEventListener('input', () => { currentPage = 1; apply(); });
+        el?.addEventListener('change', () => { currentPage = 1; apply(); });
     });
+
+    if (reconActual) {
+        reconActual.addEventListener('input', apply);
+    }
 
     apply();
 })();

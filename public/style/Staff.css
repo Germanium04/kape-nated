@@ -125,7 +125,7 @@ a.btn { display: inline-block; text-align: center; text-decoration: none; }
 .pos {
   display: grid;
   grid-template-columns: 1fr 340px;
-  gap: 16px;
+  gap: 20px;
   max-width: 1280px;
   margin: 0 auto;
   padding: 16px 24px;
@@ -160,15 +160,15 @@ a.btn { display: inline-block; text-align: center; text-decoration: none; }
   flex: 1;
   overflow-y: auto; /* Menu items scroll inside this area */
   background: var(--card);
-  padding: 20px;
+  padding: 40px;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 50px;
   align-content: start;
 }
 .card {
-  all: unset; box-sizing: border-box; cursor: pointer;
-  display: flex; flex-direction: column; aspect-ratio: 1 / 1.2;
+  all: unset; box-sizing: border-box; cursor: pointer; margin-bottom: 110%;
+  display: flex; flex-direction: column; aspect-ratio: 6/7;
   border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden;
   background: var(--card); transition: transform .12s, border-color .12s;
 }
