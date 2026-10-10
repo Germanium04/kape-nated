@@ -1,7 +1,6 @@
 <x-staff.shell title="Order">
 
 <style>
-    /* Order-screen extras. Kept in this page so they always load with it. */
     .card, .card .pic { position: relative; }
     .price-tag {
         position: absolute; top: 8px; right: 8px;
@@ -15,57 +14,75 @@
 
 <div class="pos">
     <section class="menu-pane">
-        <div class="filters">
-            <label>Type: <select id="type"></select></label>
-            <label>Search: <input id="search" type="search" autocomplete="off"></label>
+        <div class="filters order-filter-wrap">
+            <div class="order-field-type">
+                <label for="type" class="order-label-text">Type</label>
+                <select id="type" class="field order-input-stretch"></select>
+            </div>
+            <div class="order-field-type">
+                <label for="availabilityFilter" class="order-label-text">Availability</label>
+                <select id="availabilityFilter" class="field order-input-stretch">
+                    <option value="all">All items</option>
+                    <option value="available" selected>Available only</option>
+                    <option value="unavailable">Unavailable only</option>
+                </select>
+            </div>
+            <div class="order-field-search">
+                <label for="search" class="order-label-text">Search menu</label>
+                <input id="search" class="field order-input-stretch" type="search" autocomplete="off" placeholder="🔍 Search drink name...">
+            </div>
         </div>
         <div class="grid" id="grid"></div>
     </section>
 
     <aside class="ticket">
-    <div class="meta">
-        <span>Order No. <b id="orderNo">{{ $nextNo }}</b></span>
-        <span>{{ $branch ?? 'No branch' }} · <b>{{ now()->format('M j, Y') }}</b></span>
-    </div>
-    <h3>Order List</h3>
-    <div class="lines" id="lines"></div>
-
-    <div class="seg pay" role="radiogroup" aria-label="Payment method">
-        <input type="radio" name="pay" id="payCash" value="cash" checked><label for="payCash">Cash</label>
-        <input type="radio" name="pay" id="payGcash" value="gcash"><label for="payGcash">GCash</label>
-    </div>
-
-    <!-- Cash Payment Inputs (Toggled when Cash is selected) -->
-    <div id="cashCalcArea" style="margin: 10px 0; padding: 8px; background: rgba(0,0,0,0.03); border-radius: 8px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-            <label for="cashTendered" style="font-size: 13px; font-weight: 600;">Cash Received:</label>
-            <input type="text" id="cashTendered" inputmode="decimal" placeholder="0.00" style="width: 100px; text-align: right; padding: 4px 8px; border: 1px solid #ccc; border-radius: 4px; font-weight: 600;">
+        <div class="meta">
+            <span>Order No. <b id="orderNo">{{ $nextNo }}</b></span>
+            <span>{{ $branch ?? 'No branch' }} · <b>{{ now()->format('M j, Y') }}</b></span>
         </div>
-        <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: bold; color: var(--ink);">
-            <span>Change:</span>
-            <span id="cashChange">₱0.00</span>
-        </div>
-    </div>
+        <h3>Order List</h3>
+        <div class="lines" id="lines"></div>
 
-    <div class="total"><span>Total</span><strong id="total">₱0.00</strong></div>
-    <div class="msg" id="msg" role="status"></div>
-    <button class="btn" id="complete" disabled>Complete Order</button>
-</aside>
+        <div class="seg pay" role="radiogroup" aria-label="Payment method">
+            <input type="radio" name="pay" id="payCash" value="cash" checked><label for="payCash">Cash</label>
+            <input type="radio" name="pay" id="payGcash" value="gcash"><label for="payGcash">GCash</label>
+        </div>
+
+        <!-- Cash Payment Inputs -->
+        <div id="cashCalcArea" class="payment-calc-box">
+            <div class="payment-calc-row">
+                <label for="cashTendered" class="payment-calc-label">Cash Received:</label>
+                <input type="text" id="cashTendered" inputmode="decimal" placeholder="0.00" class="payment-tendered-input">
+            </div>
+            <div class="payment-change-display">
+                <span>Change:</span>
+                <span id="cashChange">₱0.00</span>
+            </div>
+        </div>
+
+        <!-- GCash Reference Inputs -->
+        <div id="gcashCalcArea" class="payment-calc-box" hidden>
+            <div class="payment-calc-row-single">
+                <label for="gcashRef" class="payment-calc-label">Ref. No.:</label>
+                <input type="text" id="gcashRef" placeholder="Ref. No." class="payment-ref-input">
+            </div>
+        </div>
+
+        <div class="total"><span>Total</span><strong id="total">₱0.00</strong></div>
+        <div class="msg" id="msg" role="status"></div>
+        <button class="btn" id="complete" disabled>Complete Order</button>
+    </aside>
 </div>
 
 <x-staff.modal id="addonModal" withPhoto>
     <h2 id="mTitle"></h2>
     <p class="m-type" id="mType"></p>
 
-    {{-- Each block below is filled in (or hidden) by Staff.js depending on the drink. --}}
-
-    {{-- Size: Grande / Venti, or Small cone / Giant swirl. Same two-pill toggle as Cold / Hot. --}}
     <div id="mSizeWrapper" hidden>
         <div class="sub">Size</div>
         <div class="seg" id="mSizes"></div>
     </div>
 
-    {{-- Hot / Cold: only drinks that come both ways --}}
     <div id="mTempWrapper" hidden>
         <div class="sub">Temperature</div>
         <div class="seg">
@@ -76,7 +93,6 @@
         </div>
     </div>
 
-    {{-- Add-ons: only the ones assigned to this drink's type (coffee: shot / syrup / ice cream, soda: boba / jelly) --}}
     <div id="mAddonsWrapper" hidden>
         <div class="sub" id="mAddonsHead">Add-ons</div>
         <div id="mAddons"></div>
@@ -84,6 +100,49 @@
 
     <button type="button" class="btn" id="mAdd">Add to Order</button>
 </x-staff.modal>
+
+<!-- Clean Single-Column Order Receipt Modal -->
+<div class="modal" id="receiptModal" hidden>
+    <div class="receipt-modal-box">
+        <div class="receipt-modal-header">
+            <h2>Order Completed!</h2>
+            <p id="rcptMeta" class="m-type"></p>
+        </div>
+
+        <div class="modal-content-scroll" style="overflow-y: auto; max-height: 55vh;">
+            <div id="receiptPrintArea" class="receipt-paper">
+                <div class="receipt-paper-head">
+                    <h3>Kape-nated</h3>
+                    <p class="receipt-branch">{{ $branch ?? 'Main Branch' }}</p>
+                    <p id="rcptDate" class="receipt-date"></p>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px dashed var(--line-soft);">
+                    <span>Order No. <b>#<span id="rcptOrderNo"></span></b></span>
+                    <span>Payment: <b id="rcptPayMethod"></b></span>
+                </div>
+
+                <div id="rcptItems" class="receipt-paper-body"></div>
+
+                <div class="receipt-paper-footer">
+                    <div class="receipt-row-total">
+                        <span>Total Amount</span>
+                        <strong id="rcptTotal" style="font-family: 'Baloo 2', sans-serif; font-size: 20px;">₱0.00</strong>
+                    </div>
+                    <div id="rcptCashRow" class="receipt-row-sub" style="margin-top: 6px;" hidden>
+                        <span>Cash Tendered / Change</span>
+                        <span id="rcptChange">₱0.00 / ₱0.00</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="receipt-modal-actions" style="margin-top: 14px;">
+            <button type="button" class="btn btn--ghost btn--sm" data-close-modal="receiptModal" style="margin: 0; flex: 1;">Done</button>
+            <button type="button" class="btn btn--primary btn--sm" id="btnPrintReceipt" style="margin: 0; flex: 1;">🖨️ Print Receipt</button>
+        </div>
+    </div>
+</div>
 
 @push('scripts')
     <script>

@@ -281,7 +281,7 @@ a { color: inherit; }
 }
 
 .stat--up    { border-left: 5px solid var(--good); }
-.stat--alert { border-left: 5px solid var(--flag); }
+.stat--alert { border-left: 5px solid var(--flag) !important; }
 .stat--down  { border-left: 5px solid var(--tan-dark); }
 
 /* ---------- buttons and fields ---------- */
@@ -342,6 +342,20 @@ a { color: inherit; }
 .form-row .field-group { flex: 1; }
 
 .form-actions { display: flex; gap: 10px; margin-top: 4px; flex-wrap: wrap; }
+
+/* Guarantee identical height and box-sizing across form inputs */
+.field,
+.recipe-ing-select,
+.recipe-ing-amount {
+    height: 38px !important;
+    line-height: 1.4 !important;
+    padding: 6px 10px !important;
+    box-sizing: border-box !important;
+}
+
+.recipe-row {
+    align-items: center !important;
+}
 
 .checks {
     border: 1px dashed var(--line-soft);

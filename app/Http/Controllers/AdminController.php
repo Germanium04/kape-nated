@@ -55,21 +55,31 @@ class AdminController extends Controller
      */
     public function menu()
     {
-        $menuItems = MenuItem::with('ingredients')->get()->map(function ($item) {$recipe = [];
-            foreach ($item->ingredients as $ing) {$recipe[$ing->key] = (float)$ing->pivot->quantity;
+        $menuItems = MenuItem::with('ingredients')->get()->map(function ($item) {
+            $recipe = [];
+            foreach ($item->ingredients as $ing) {
+                $recipe[$ing->key] = (float) $ing->pivot->quantity;
             }
 
             return [
-                'name'   => $item->name,
-                'price'  => (float) $item->price,
-                'recipe' => $recipe,
+                'name'            => $item->name,
+                'price'           => (float) $item->price,
+                'drink_type_id'   => $item->drink_type_id,
+                'drink_type_name' => $item->drinkType->name ?? null,
+                'is_active'       => $item->is_active,
+                'image_path'      => $item->image_path,
+                'recipe'          => $recipe,
             ];
         })->toArray();
 
-        $drinkTypes = DrinkType::pluck('name')->toArray();
-        $ingredients =$this->getFormattedIngredients();
+        $drinkTypes  = DrinkType::select('id', 'name')->get()->toArray();
+        $ingredients = $this->getFormattedIngredients();
+        
+        // Add this line to fetch addons
+        $addons = Addon::select('id', 'name', 'price')->get()->toArray();
 
-        return view('layouts.admin.Menu', compact('menuItems', 'drinkTypes', 'ingredients'));
+        // Add 'addons' to compact()
+        return view('layouts.admin.Menu', compact('menuItems', 'drinkTypes', 'ingredients', 'addons'));
     }
 
     /**
@@ -116,29 +126,53 @@ class AdminController extends Controller
             })->toArray();
     }
 
-    private function getFormattedIngredients(): array
+    // In AdminController.php -> getFormattedIngredients()
+private function getFormattedIngredients(): array
+{
+    $today = Carbon::today();
+
+    // 1. Calculate today's usage from Stock Movements
+    $usedTodayMap = StockMovement::whereDate('created_at',$today)
+        ->where('change', '<', 0)
+        ->select('ingredient_id', DB::raw('SUM(ABS(`change`)) as total_used'))
+        ->groupBy('ingredient_id')
+        ->pluck('total_used', 'ingredient_id');
+
+    // 2. Sum stock from the branch_inventory junction table per ingredient
+    $branchStockTotals = DB::table('branch_inventory')
+        ->select('ingredient_id', DB::raw('SUM(stock) as total_stock'))
+        ->groupBy('ingredient_id')
+        ->pluck('total_stock', 'ingredient_id');
+
+    return Ingredient::all()->map(function ($ing) use ($usedTodayMap,$branchStockTotals) {
+        return [
+            'id'         => $ing->id,
+            'key'        => $ing->key,
+            'name'       => $ing->name,
+            'unit'       => $ing->unit,
+            // Uses real summed branch stock from DB, falls back to $ing->stock if empty
+            'stock'      => (float) ($branchStockTotals[$ing->id] ?? $ing->stock),
+            'reorder'    => (float) $ing->reorder_level,
+            'used_today' => (float) ($usedTodayMap[$ing->id] ?? 0),             'cost'       => (float)$ing->cost,
+            'is_active'  => (bool) $ing->is_active,
+        ];
+    })->toArray();
+}
+
+    /**
+     * Toggle ingredient active status via AJAX
+     */
+    public function toggleIngredient(Ingredient $ingredient)
     {
-        $today = Carbon::today();
+        $ingredient->is_active = !$ingredient->is_active;
+        $ingredient->save();
 
-        // Calculate usage per ingredient for today from negative stock_movements
-        $usedTodayMap = StockMovement::whereDate('created_at',$today)
-            ->where('change', '<', 0)
-            ->select('ingredient_id', DB::raw('SUM(ABS(`change`)) as total_used'))
-            ->groupBy('ingredient_id')
-            ->pluck('total_used', 'ingredient_id');
-
-        return Ingredient::all()->map(function ($ing) use ($usedTodayMap) {
-            return [
-                'key'        => $ing->key,
-                'name'       => $ing->name,
-                'unit'       => $ing->unit,
-                'stock'      => (float) $ing->stock,
-                'reorder'    => (float) $ing->reorder_level,
-                'used_today' => (float) ($usedTodayMap[$ing->id] ?? 0),                 'cost'       => (float)$ing->cost,
-            ];
-        })->toArray();
+        return response()->json([
+            'success'   => true,
+            'is_active' => $ingredient->is_active,
+        ]);
     }
-
+    
     private function getSalesByDay(): array
     {
         $days = collect();
@@ -231,5 +265,27 @@ class AdminController extends Controller
         }
 
         return $weights;
+    }
+
+    public function storeStockIn(Request $request)
+    {
+        $ingredient = Ingredient::findOrFail($request->ingredient_id);
+        
+        // Quantity added in purchase unit (e.g. 2 Gallons)
+        $inputQty = (float) $request->quantity; 
+        
+        // Automatically convert to base stock unit (e.g. 2 * 3785.41 ml)
+        $convertedBaseStock = $inputQty * $ingredient->conversion_factor;
+
+        $ingredient->increment('stock', $convertedBaseStock);
+
+        StockMovement::create([
+            'ingredient_id' => $ingredient->id,
+            'change'        => $convertedBaseStock,
+            'type'          => 'restock',
+            'note'          => "Restocked {$inputQty} {$ingredient->purchase_unit}(s)",
+        ]);
+
+        return back()->with('success', 'Stock updated successfully.');
     }
 }

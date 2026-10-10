@@ -6,12 +6,15 @@ use Illuminate\Database\Eloquent\Model;
 
 class Ingredient extends Model
 {
-    protected $fillable = ['key', 'name', 'unit', 'stock', 'reorder_level', 'cost'];
+    protected $fillable = [
+        'key', 'name', 'unit', 'purchase_unit', 
+        'conversion_factor', 'cost', 'is_active'
+    ];
 
     protected $casts = [
-        'stock'         => 'float',
-        'reorder_level' => 'float',
-        'cost'          => 'float',
+        'cost'              => 'float',
+        'conversion_factor' => 'float',
+        'is_active'         => 'boolean',
     ];
 
     public function movements()
@@ -19,16 +22,18 @@ class Ingredient extends Model
         return $this->hasMany(StockMovement::class);
     }
 
-    public function isLow(): bool
+    public function branches()
     {
-        return $this->stock <= $this->reorder_level;
+        return $this->belongsToMany(Branch::class, 'branch_inventory')
+            ->withPivot(['stock', 'reorder_level', 'is_active'])
+            ->withTimestamps();
     }
 
-    /** 'out' | 'low' | 'ok', used by the badges on the inventory and dashboard pages. */
-    public function getStateAttribute(): string
+    public function isLow(?float $customStock = null, ?float $customReorder = null): bool
     {
-        if ($this->stock <= 0) return 'out';
+        $stock = $customStock ?? (isset($this->stock) ? (float) $this->stock : 0);
+        $reorder = $customReorder ?? (isset($this->reorder_level) ? (float) $this->reorder_level : 0);
 
-        return $this->isLow() ? 'low' : 'ok';
+        return $stock <= $reorder;
     }
 }

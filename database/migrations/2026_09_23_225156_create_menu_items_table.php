@@ -11,6 +11,7 @@ return new class extends Migration
         Schema::create('menu_items', function (Blueprint $table) {
             $table->id();
             $table->string('name');
+            $table->string('image_path')->nullable(); // Clean field definition without ->after()
             $table->decimal('price', 8, 2); // Base or Grande price
             $table->decimal('price_venti', 8, 2)->nullable(); // Venti price
             $table->boolean('has_sizes')->default(false);

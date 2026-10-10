@@ -10,12 +10,16 @@ return new class extends Migration
     {
         Schema::create('ingredients', function (Blueprint $table) {
             $table->id();
-            $table->string('key')->unique(); // 'beans', 'milk', etc. — matches your DemoData keys
+            $table->string('key')->unique(); 
             $table->string('name');
-            $table->string('unit', 10); // g, ml, pc
+            $table->enum('unit_type', ['volume', 'weight', 'count'])->default('volume'); // <-- Volume (ml), Weight (g), Count (pc)
+            $table->string('unit', 10); // base unit: ml, g, pc
+            $table->string('purchase_unit', 20)->nullable()->default('1L Bottle'); // Gallon, 1Kg Bag, Pack, etc.
+            $table->decimal('conversion_factor', 10, 2)->default(1.00); 
             $table->decimal('stock', 10, 2)->default(0);
             $table->decimal('reorder_level', 10, 2)->default(0);
-            $table->decimal('cost', 10, 2)->default(0); // cost per unit
+            $table->decimal('cost', 10, 2)->default(0);
+            $table->boolean('is_active')->default(true);
             $table->timestamps();
         });
     }

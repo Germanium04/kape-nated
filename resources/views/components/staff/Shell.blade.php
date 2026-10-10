@@ -27,10 +27,9 @@
 <body>
 
 <header class="topbar">
-    <a class="brand" href="{{ route('staff.dashboard') }}">kape&#8209;nated<span class="brand-bean">&#9679;</span></a>
+    <a class="brand" href="{{ route('staff.orders') }}">kape&#8209;nated<span class="brand-bean">&#9679;</span></a>
 
     <nav class="topnav">
-        <a href="{{ route('staff.dashboard') }}" class="{{ request()->routeIs('staff.dashboard') ? 'is-current' : '' }}">Dashboard</a>
         <a href="{{ route('staff.orders') }}"    class="{{ request()->routeIs('staff.orders')    ? 'is-current' : '' }}">Order</a>
         <a href="{{ route('staff.inventory') }}" class="{{ request()->routeIs('staff.inventory') ? 'is-current' : '' }}">Inventory</a>
     </nav>

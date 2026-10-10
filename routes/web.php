@@ -71,14 +71,13 @@ Route::prefix('staff')
 
         Route::redirect('/', '/staff/orders');
 
-        //Dashboard
-        Route::get('/dashboard', 'dashboard')->name('dashboard');
-
         // Orders: the till screen
         Route::get('/orders', 'orders')->name('orders');
         Route::post('/orders', 'storeOrder')->name('orders.store');
 
-        // Inventory: stock levels + restock
+        // Inventory: stock levels + restock / actions
         Route::get('/inventory', 'inventory')->name('inventory');
         Route::post('/inventory/{ingredient}/restock', 'restock')->name('inventory.restock');
+        Route::post('/inventory/action', 'handleInventoryAction')->name('inventory.action'); // <-- ADD THIS LINE
+        Route::patch('/admin/ingredients/{ingredient}/toggle', [AdminController::class, 'toggleIngredient'])->name('admin.ingredients.toggle');
     });

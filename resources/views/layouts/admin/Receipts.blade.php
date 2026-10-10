@@ -110,22 +110,21 @@
     </div>
     </x-admin.panel>
 
-    <!-- Insert in Receipts.blade.php above the Transactions panel -->
     <x-admin.panel title="Cash Drawer Audit" note="Reconcile physical cash counted against system total for the selected date">
-        <div class="filter-row">
-            <label class="field-group">
+        <div class="filter-row" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; width: 100%;">
+            <label class="field-group" style="margin-bottom: 0;">
                 <span>System Cash Takings</span>
-                <input type="text" class="field" id="reconExpected" value="₱0.00" readonly style="font-weight: 600;">
+                <input type="text" class="field" id="reconExpected" value="₱0.00" readonly style="font-weight: 600; width: 100%;">
             </label>
 
-            <label class="field-group">
+            <label class="field-group" style="margin-bottom: 0;">
                 <span>Physical Cash Counted</span>
-                <input type="number" class="field" id="reconActual" placeholder="e.g. 15000" step="0.01">
+                <input type="number" class="field" id="reconActual" placeholder="e.g. 15000" step="0.01" style="width: 100%;">
             </label>
 
-            <label class="field-group">
+            <label class="field-group" style="margin-bottom: 0;">
                 <span>Variance (Over / Short)</span>
-                <input type="text" class="field" id="reconVariance" value="₱0.00" readonly style="font-weight: 700;">
+                <input type="text" class="field" id="reconVariance" value="₱0.00" readonly style="font-weight: 700; width: 100%;">
             </label>
         </div>
     </x-admin.panel>
