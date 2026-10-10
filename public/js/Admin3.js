@@ -3,179 +3,73 @@ function initInventory() {
     const data = window.KAPE;
     if (!data) return;
 
-    const num = (n) => Math.round(n).toLocaleString('en-PH');
-    const pesoDec = (n) => '₱' + n.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    let combined = JSON.parse(JSON.stringify(data.ingredients));
-
+    let items = JSON.parse(JSON.stringify(data.ingredients || []));
     let currentPage = 1;
     const pageSize = 10;
 
-    function branchWeight(branch) {
-        return branch === 'all' ? 1 : (data.branchWeights[branch] || 0);
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+    const num = (n) => Math.round(n).toLocaleString('en-PH');
+    const pesoDec = (n) => '₱' + n.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    function getMasterIngredients() {
+        const map = new Map();
+        items.forEach(i => {
+            if (!map.has(i.key)) {
+                map.set(i.key, { key: i.key, name: i.name, unit: i.unit });
+            }
+        });
+        return Array.from(map.values());
     }
 
-    function stockForBranch(branch) {
-        const w = branchWeight(branch);
-        return combined.map((i) => ({ ...i, stock: i.stock * w, used_today: i.used_today * w }));
-    }
-
-    function byKeyOf(list) { return Object.fromEntries(list.map((i) => [i.key, i])); }
-
-    function usageRate(item, mode) {
-        if (item.used_today && item.used_today > 0) {
-            return mode === 'day' ? item.used_today : item.used_today * 7;
-        }
-        
-        // Dynamic fallback estimate if DB stock movements for today are 0
-        const seed = Math.abs(Math.sin(item.key.length)) || 0.5;
-        const baseDaily = Math.round((item.reorder || 1000) * (0.08 + seed * 0.05));
-        return mode === 'day' ? baseDaily : baseDaily * 7;
-    }
-
-    function status(item) {
-        if (!item.is_active) return { tone: 'out', label: 'Disabled' };
-        if (item.stock <= 0) return { tone: 'out', label: 'Out of stock' };
-        if (item.stock <= item.reorder) return { tone: 'low', label: 'Reorder now' };
-        if (item.stock <= item.reorder * 1.25) return { tone: 'info', label: 'Getting low' };
-        return { tone: 'ok', label: 'Healthy' };
-    }
-
-    function daysLeft(item, rate) {
-        if (!rate || rate <= 0) return null;
-        const days = item.stock / rate;
-        return days > 365 ? 365 : days;
-    }
-
-    function currentList() {
+    function currentBranch() {
         const branchEl = document.getElementById('stockBranchFilter') || document.getElementById('stockBranch');
-        const selectedBranch = branchEl ? branchEl.value : 'all';
-        return stockForBranch(selectedBranch);
+        return branchEl ? branchEl.value : 'all';
     }
 
-    function currentRateMode() {
-        const modeEl = document.getElementById('stockRateMode');
-        return modeEl ? modeEl.value : 'day';
-    }
-
-    // --- CLICKABLE STAT CARDS ---
     function renderStats() {
-        const list = currentList();
-        const value = list.reduce((sum, i) => sum + i.stock * i.cost, 0);
-        const flagged = list.filter((i) => i.is_active && i.stock <= i.reorder).length;
+        const selBranch = currentBranch();
         const statsBox = document.getElementById('inventoryStats');
         const badge = document.getElementById('runningLowBadge');
 
-        if (badge) badge.textContent = flagged;
+        const filteredList = items.filter(i => selBranch === 'all' || i.branch_name === selBranch);
+
+        const totalValue = filteredList.reduce((sum, i) => sum + (i.stock * (i.cost || 0)), 0);
+        const lowCount = filteredList.filter(i => i.is_active && i.stock <= i.reorder).length;
+
+        if (badge) badge.textContent = lowCount;
         if (!statsBox) return;
 
         statsBox.innerHTML = `
-            <article class="stat stat--up" id="cardTotalValue" style="display: flex; flex-direction: column; justify-content: space-between; min-height: 100px;">
+            <article class="stat stat--up" style="display: flex; flex-direction: column; justify-content: space-between; min-height: 100px;">
                 <p class="stat-label">Total Stock Value</p>
-                <p class="stat-value">${pesoDec(value)}</p>
-                <p class="stat-trend">Total valuation for the selected branch</p>
+                <p class="stat-value">${pesoDec(totalValue)}</p>
+                <p class="stat-trend">Valuation for ${selBranch === 'all' ? 'All Branches' : selBranch}</p>
             </article>
             
-            <article class="stat ${flagged ? 'stat--alert' : 'stat--muted-alert'}" id="cardRunningLow" style="display: flex; flex-direction: column; justify-content: space-between; min-height: 100px; cursor: pointer; border-left: 5px solid var(--flag, #a63d2a);" title="Click to view running low items">
-                <p class="stat-label" style="display: flex; align-items: center; gap: 6px;">
-                    ${flagged ? '<span style="color: var(--flag, #a63d2a); font-size: 14px;">⚠️</span>' : ''}
-                    <span>Items Running Low</span>
-                </p>
-                <p class="stat-value" style="color: ${flagged ? 'var(--flag, #a63d2a)' : 'inherit'};">${flagged} Items</p>
-                <p class="stat-trend">${flagged ? 'Needs immediate replenishment' : 'Stock room healthy'}</p>
+            <article class="stat ${lowCount ? 'stat--alert' : 'stat--muted-alert'}" style="display: flex; flex-direction: column; justify-content: space-between; min-height: 100px; border-left: 5px solid var(--flag, #a63d2a);">
+                <p class="stat-label">${lowCount ? '⚠️ ' : ''}Items Running Low</p>
+                <p class="stat-value" style="color: ${lowCount ? 'var(--flag, #a63d2a)' : 'inherit'};">${lowCount} Items</p>
+                <p class="stat-trend">${lowCount ? 'Needs immediate replenishment' : 'Stock levels healthy'}</p>
             </article>
 
-            <article class="stat stat--up" id="cardTotalItems" style="display: flex; flex-direction: column; justify-content: space-between; min-height: 100px; cursor: pointer;" title="Click to view all items">
-                <p class="stat-label">Total Tracked Ingredients</p>
-                <p class="stat-value">${list.length} Items</p>
-                <p class="stat-trend">Active items monitored in system</p>
+            <article class="stat stat--up" style="display: flex; flex-direction: column; justify-content: space-between; min-height: 100px;">
+                <p class="stat-label">Total Branch Records</p>
+                <p class="stat-value">${filteredList.length} Items</p>
+                <p class="stat-trend">Monitored stock items</p>
             </article>`;
-
-        document.getElementById('cardRunningLow')?.addEventListener('click', filterToLowStock);
-        document.getElementById('cardTotalItems')?.addEventListener('click', filterToAllItems);
     }
 
-    function filterToLowStock() {
-        const statusFilter = document.getElementById('stockStatusFilter');
-        if (statusFilter) statusFilter.value = 'low';
-        
-        const tabLow = document.getElementById('tabRunningLow');
-        const tabAll = document.getElementById('tabAllItems');
-        if (tabLow) {
-            tabLow.style.color = 'var(--primary, #a63d2a)';
-            tabLow.style.borderBottom = '2px solid var(--primary, #a63d2a)';
-        }
-        if (tabAll) {
-            tabAll.style.color = 'var(--muted, #666)';
-            tabAll.style.borderBottom = 'none';
-        }
-
-        currentPage = 1;
-        renderTable();
-    }
-
-    function filterToAllItems() {
-        const statusFilter = document.getElementById('stockStatusFilter');
-        if (statusFilter) statusFilter.value = 'all';
-        
-        const tabAll = document.getElementById('tabAllItems');
-        const tabLow = document.getElementById('tabRunningLow');
-        if (tabAll) {
-            tabAll.style.color = 'var(--primary, #a63d2a)';
-            tabAll.style.borderBottom = '2px solid var(--primary, #a63d2a)';
-        }
-        if (tabLow) {
-            tabLow.style.color = 'var(--muted, #666)';
-            tabLow.style.borderBottom = 'none';
-        }
-
-        currentPage = 1;
-        renderTable();
-    }
-
-    // Dynamic Packaging Dropdown Listener based on Measurement Type
-    document.getElementById('invIngUnitType')?.addEventListener('change', (e) => {
-        const type = e.target.value;
-        const purchaseSelect = document.getElementById('invIngPurchaseUnit');
-        if (!purchaseSelect) return;
-
-        if (type === 'volume') {
-            purchaseSelect.innerHTML = `
-                <option value="1L Bottle" data-factor="1000">1 Liter Bottle (1,000 ml)</option>
-                <option value="Gallon" data-factor="3785.41">Gallon (3,785.41 ml)</option>
-                <option value="500ml Pack" data-factor="500">500ml Pack</option>
-                <option value="Individual" data-factor="1">Custom ml (1:1)</option>
-            `;
-        } else if (type === 'weight') {
-            purchaseSelect.innerHTML = `
-                <option value="1Kg Bag" data-factor="1000">1 Kilogram Bag (1,000 g)</option>
-                <option value="500g Bag" data-factor="500">500 Gram Bag</option>
-                <option value="250g Pack" data-factor="250">250 Gram Pack</option>
-                <option value="Individual" data-factor="1">Custom Grams (1:1)</option>
-            `;
-        } else if (type === 'count') {
-            purchaseSelect.innerHTML = `
-                <option value="Box (100 pcs)" data-factor="100">Box (100 pcs)</option>
-                <option value="Pack (50 pcs)" data-factor="50">Pack (50 pcs)</option>
-                <option value="Individual" data-factor="1">Single Unit (1:1)</option>
-            `;
-        }
-    });
-
-    // --- TABLE PAGINATION & RENDER ---
     function renderTable() {
-        const list = currentList();
-        const mode = currentRateMode();
         const body = document.querySelector('#stockTable tbody');
-        
-        const term = (document.getElementById('stockSearch')?.value || '').trim().toLowerCase();
-        const statusVal = document.getElementById('stockStatusFilter')?.value || 'all';
-        const unitVal = document.getElementById('stockUnitFilter')?.value || 'all';
-
         if (!body) return;
 
-        const filtered = list.filter((i) => {
-            const matchesSearch = !term || i.name.toLowerCase().includes(term);
-            const matchesUnit = unitVal === 'all' || i.unit === unitVal;
+        const selBranch = currentBranch();
+        const term = (document.getElementById('stockSearch')?.value || '').trim().toLowerCase();
+        const statusVal = document.getElementById('stockStatusFilter')?.value || 'all';
+
+        const filtered = items.filter((i) => {
+            const matchesBranch = selBranch === 'all' || i.branch_name === selBranch;
+            const matchesSearch = !term || i.name.toLowerCase().includes(term) || (i.branch_name && i.branch_name.toLowerCase().includes(term));
             
             const isLow = i.stock <= i.reorder;
             const isOut = i.stock <= 0 || !i.is_active;
@@ -184,140 +78,104 @@ function initInventory() {
                 (statusVal === 'healthy' && !isLow && i.is_active) ||
                 (statusVal === 'out' && isOut);
 
-            return matchesSearch && matchesUnit && matchesStatus;
+            return matchesBranch && matchesSearch && matchesStatus;
         });
 
         const totalRows = filtered.length;
         const totalPages = Math.ceil(totalRows / pageSize) || 1;
-
         if (currentPage > totalPages) currentPage = 1;
 
         const startIdx = (currentPage - 1) * pageSize;
-        const endIdx = startIdx + pageSize;
-        const visibleItems = filtered.slice(startIdx, endIdx);
+        const visibleItems = filtered.slice(startIdx, startIdx + pageSize);
 
         body.innerHTML = visibleItems.map((i) => {
-            const rate = usageRate(i, mode);
-            const s = status(i);
-            const d = daysLeft(i, rate);
-            const days = d === null ? '—' : (d < 1 ? 'Today' : d.toFixed(1) + ' d');
-            const isActive = i.is_active !== false;
+            const isLow = i.stock <= i.reorder;
+            const isOut = i.stock <= 0 || !i.is_active;
+            const tone = !i.is_active || isOut ? 'out' : (isLow ? 'low' : 'ok');
+            const label = !i.is_active ? 'Disabled' : (isOut ? 'Out of stock' : (isLow ? 'Reorder now' : 'Healthy'));
 
-            return `<tr class="${!isActive || s.tone === 'low' || s.tone === 'out' ? 'row--flag' : ''}" style="${!isActive ? 'opacity: 0.6; background-color: rgba(0,0,0,0.02);' : ''}">
-                <td>
-                    <strong>${i.name}</strong>
-                </td>
-                <td class="ta-r mono">${num(i.stock)} ${i.unit}</td>
-                <td class="ta-r mono">${num(rate)} ${i.unit}</td>
-                <td class="ta-r mono">${num(i.reorder)} ${i.unit}</td>
-                <td class="ta-r mono">${days}</td>
-                <td><span class="badge badge--${s.tone}">${s.label}</span></td>
-                <td class="ta-r mono">${pesoDec(i.stock * i.cost)}</td>
-                <td class="ta-r">
-                    <button type="button" class="btn btn--ghost btn--sm toggle-active-btn" data-key="${i.key}" data-id="${i.id || ''}" style="font-size: 11px; padding: 2px 8px;">
-                        ${isActive ? 'Disable' : 'Enable'}
-                    </button>
-                </td>
+            return `<tr>
+                <td><span class="badge badge--neutral" style="font-weight: 600;">${i.branch_name || 'All'}</span></td>
+                <td><strong>${i.name}</strong></td>
+                <td class="ta-r mono"><b>${num(i.stock)} ${i.unit}</b></td>
+                <td class="ta-r mono">${num(i.used_today || 0)} ${i.unit}</td>
+                <td class="ta-r mono">${num(i.reorder || 0)} ${i.unit}</td>
+                <td><span class="badge badge--${tone}">${label}</span></td>
+                <td class="ta-r mono">${pesoDec(i.stock * (i.cost || 0))}</td>
             </tr>`;
-        }).join('') || '<tr><td colspan="8" class="empty-note">No ingredient matches your filters.</td></tr>';
+        }).join('') || '<tr><td colspan="7" class="empty-note">No branch stock records match your criteria.</td></tr>';
 
-        bindToggleListeners();
-        renderPaginationControls(totalRows, totalPages, startIdx, endIdx);
+        renderPaginationControls(totalRows, totalPages, startIdx);
     }
 
-    // --- TOGGLE INGREDIENT IS_ACTIVE DB LISTENER ---
-    function bindToggleListeners() {
-        document.querySelectorAll('.toggle-active-btn').forEach(btn => {
-            btn.addEventListener('click', async (e) => {
-                const key = e.target.getAttribute('data-key');
-                const id = e.target.getAttribute('data-id');
-                const item = combined.find(i => i.key === key);
+    function renderPaginationControls(totalRows, totalPages, startIdx) {
+        const bar = document.getElementById('inventoryPagination');
+        const info = document.getElementById('inventoryPageInfo');
+        const numbers = document.getElementById('inventoryPageNumbers');
+        const prev = document.getElementById('inventoryPrevBtn');
+        const next = document.getElementById('inventoryNextBtn');
 
-                if (!item) return;
+        if (!bar) return;
+        if (totalRows <= pageSize) { bar.hidden = true; return; }
 
-                // Optimistic UI update
-                item.is_active = !item.is_active;
-                render();
+        bar.hidden = false;
+        if (info) {
+            const end = Math.min(startIdx + pageSize, totalRows);
+            info.textContent = `Showing ${totalRows ? startIdx + 1 : 0}–${end} of ${totalRows} items`;
+        }
 
-                // DB Sync via Laravel Endpoint
-                if (id) {
-                    try {
-                        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-                        await fetch(`/admin/ingredients/${id}/toggle`, {
-                            method: 'PATCH',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRF-TOKEN': csrfToken || ''
-                            }
-                        });
-                    } catch (err) {
-                        console.error('Failed to update ingredient status in database:', err);
-                    }
+        if (numbers) {
+            numbers.innerHTML = '';
+            let pages = [];
+            for (let i = 1; i <= totalPages; i++) {
+                if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
+                    pages.push(i);
+                } else if (pages[pages.length - 1] !== '...') {
+                    pages.push('...');
+                }
+            }
+
+            pages.forEach((p) => {
+                if (p === '...') {
+                    const span = document.createElement('span');
+                    span.textContent = '…';
+                    span.style.cssText = 'padding: 0 0.25rem; align-self: center; color: #888; font-size: 0.85rem;';
+                    numbers.appendChild(span);
+                } else {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.textContent = p;
+                    btn.className = p === currentPage ? 'btn btn--primary btn--sm' : 'btn btn--ghost btn--sm';
+                    btn.style.cssText = 'min-width: 2rem; padding: 0.25rem 0.5rem;';
+                    btn.addEventListener('click', () => { currentPage = p; renderTable(); });
+                    numbers.appendChild(btn);
                 }
             });
-        });
+        }
+
+        if (prev) { prev.disabled = currentPage <= 1; prev.onclick = () => { if (currentPage > 1) { currentPage--; renderTable(); } }; }
+        if (next) { next.disabled = currentPage >= totalPages; next.onclick = () => { if (currentPage < totalPages) { currentPage++; renderTable(); } }; }
     }
 
-    function renderPaginationControls(totalRows, totalPages, startIdx, endIdx) {
-        const paginationBar = document.getElementById('inventoryPagination');
-        const pageInfo = document.getElementById('inventoryPageInfo');
-        const pageNumbers = document.getElementById('inventoryPageNumbers');
-        const prevBtn = document.getElementById('inventoryPrevBtn');
-        const nextBtn = document.getElementById('inventoryNextBtn');
-
-        if (!paginationBar) return;
-
-        if (totalRows <= pageSize) {
-            paginationBar.hidden = true;
-            return;
-        }
-
-        paginationBar.hidden = false;
-
-        if (pageInfo) {
-            const from = totalRows ? startIdx + 1 : 0;
-            const to = Math.min(endIdx, totalRows);
-            pageInfo.textContent = `Showing ${from}–${to} of ${totalRows} items`;
-        }
-
-        if (prevBtn) prevBtn.disabled = currentPage <= 1;
-        if (nextBtn) nextBtn.disabled = currentPage >= totalPages;
-
-        if (pageNumbers) {
-            pageNumbers.innerHTML = '';
-            for (let i = 1; i <= totalPages; i++) {
-                const btn = document.createElement('button');
-                btn.type = 'button';
-                btn.textContent = i;
-                btn.className = i === currentPage ? 'btn btn--primary btn--sm' : 'btn btn--ghost btn--sm';
-                btn.style.cssText = 'padding: 2px 8px; font-size: 12px;';
-                btn.addEventListener('click', () => {
-                    currentPage = i;
-                    renderTable();
-                });
-                pageNumbers.appendChild(btn);
-            }
-        }
-    }
-
-    // --- 1-TO-MANY BATCH STOCK-IN ROW BUILDER ---
+    // Modal Builder Helpers
     function addStockInRow(selectedKey = '', qty = 1) {
         const container = document.getElementById('stockInRowsContainer');
         if (!container) return;
 
+        const masterList = getMasterIngredients();
         const row = document.createElement('div');
         row.className = 'stock-in-row';
         row.style.cssText = 'display: flex; gap: 8px; align-items: center; margin-bottom: 6px;';
 
-        const optionsHtml = combined.map((ing) => `
+        const optionsHtml = masterList.map((ing) => `
             <option value="${ing.key}" data-unit="${ing.unit}" ${ing.key === selectedKey ? 'selected' : ''}>
                 ${ing.name}
             </option>
         `).join('');
 
         const defaultUnit = selectedKey 
-            ? (combined.find(i => i.key === selectedKey)?.unit || 'g')
-            : (combined[0]?.unit || 'g');
+            ? (masterList.find(i => i.key === selectedKey)?.unit || 'g')
+            : (masterList[0]?.unit || 'g');
 
         row.innerHTML = `
             <select class="field stock-in-item-select" style="flex: 2; height: 38px; box-sizing: border-box; margin: 0;">
@@ -339,28 +197,28 @@ function initInventory() {
             row.querySelector('.stock-in-unit-badge').textContent = unit;
         });
 
-        row.querySelector('.remove-stock-in-row').addEventListener('click', () => { row.remove(); });
+        row.querySelector('.remove-stock-in-row').addEventListener('click', () => row.remove());
         container.appendChild(row);
     }
 
-    // --- 1-TO-MANY BATCH TRANSFER ROW BUILDER ---
     function addTransferRow(selectedKey = '', qty = 1) {
         const container = document.getElementById('transferRowsContainer');
         if (!container) return;
 
+        const masterList = getMasterIngredients();
         const row = document.createElement('div');
         row.className = 'transfer-row';
         row.style.cssText = 'display: flex; gap: 8px; align-items: center; margin-bottom: 6px;';
 
-        const optionsHtml = combined.map((ing) => `
+        const optionsHtml = masterList.map((ing) => `
             <option value="${ing.key}" data-unit="${ing.unit}" ${ing.key === selectedKey ? 'selected' : ''}>
                 ${ing.name}
             </option>
         `).join('');
 
         const defaultUnit = selectedKey 
-            ? (combined.find(i => i.key === selectedKey)?.unit || 'g')
-            : (combined[0]?.unit || 'g');
+            ? (masterList.find(i => i.key === selectedKey)?.unit || 'g')
+            : (masterList[0]?.unit || 'g');
 
         row.innerHTML = `
             <select class="field transfer-item-select" style="flex: 2; height: 38px; box-sizing: border-box; margin: 0;">
@@ -382,11 +240,16 @@ function initInventory() {
             row.querySelector('.transfer-unit-badge').textContent = unit;
         });
 
-        row.querySelector('.remove-transfer-row').addEventListener('click', () => { row.remove(); });
+        row.querySelector('.remove-transfer-row').addEventListener('click', () => row.remove());
         container.appendChild(row);
     }
 
-    // --- DYNAMIC UNIFIED MODAL SWITCHER LOGIC ---
+    function populateStockOutSelect() {
+        const select = document.getElementById('stockOutIngredientSelect');
+        if (!select) return;
+        select.innerHTML = getMasterIngredients().map(i => `<option value="${i.key}">${i.name} (${i.unit})</option>`).join('');
+    }
+
     const actionTypeSelect = document.getElementById('invActionType');
     const submitBtn = document.getElementById('submitInvActionBtn');
 
@@ -396,69 +259,30 @@ function initInventory() {
         transfer: document.getElementById('secTransfer')
     };
 
-    const submitLabels = {
-        stock_in: 'Save Stock Delivery',
-        stock_out: 'Confirm Deduction',
-        transfer: 'Complete Stock Transfer'
-    };
-
     actionTypeSelect?.addEventListener('change', (e) => {
         const selected = e.target.value;
-
         Object.keys(sections).forEach(key => {
             if (sections[key]) sections[key].hidden = (key !== selected);
         });
-
-        if (submitBtn) submitBtn.textContent = submitLabels[selected] || 'Save';
 
         if (selected === 'stock_out') populateStockOutSelect();
         if (selected === 'stock_in' && document.getElementById('stockInRowsContainer')?.children.length === 0) addStockInRow();
         if (selected === 'transfer' && document.getElementById('transferRowsContainer')?.children.length === 0) addTransferRow();
     });
 
-    function populateStockOutSelect() {
-        const select = document.getElementById('stockOutIngredientSelect');
-        if (!select) return;
-        select.innerHTML = combined.map(i => `<option value="${i.key}">${i.name} (${i.unit})</option>`).join('');
-    }
-
-    // Master Directory: Save New Raw Ingredient Handler
-    document.getElementById('saveInvIngredientBtn')?.addEventListener('click', () => {
-        const name = document.getElementById('invIngName')?.value.trim();
-        const baseUnit = document.getElementById('invIngBaseUnit')?.value;
-        const reorder = parseFloat(document.getElementById('invIngReorder')?.value) || 0;
-        const cost = parseFloat(document.getElementById('invIngCost')?.value) || 0;
-
-        if (name) {
-            combined.push({
-                key: name.toLowerCase().replace(/\s+/g, '_'),
-                name: name,
-                unit: baseUnit,
-                stock: 0,
-                reorder: reorder,
-                used_today: 0,
-                cost: cost,
-                is_active: true
-            });
-
-            render();
-
-            const modal = document.getElementById('addIngredientModal');
-            if (modal) modal.hidden = true;
-            document.body.classList.remove('is-locked');
-        }
-    });
-
-    submitBtn?.addEventListener('click', () => {
+    // SUBMIT OPERATION TO LARAVEL BACKEND
+    submitBtn?.addEventListener('click', async () => {
         const action = actionTypeSelect.value;
+        let payload = { type: action, items: [] };
 
         if (action === 'stock_in') {
-            const rows = document.querySelectorAll('#stockInRowsContainer .stock-in-row');
-            rows.forEach(row => {
+            payload.branch = document.getElementById('stockInBranch')?.value;
+            document.querySelectorAll('#stockInRowsContainer .stock-in-row').forEach(row => {
                 const key = row.querySelector('.stock-in-item-select')?.value;
                 const qty = parseFloat(row.querySelector('.stock-in-qty-input')?.value) || 0;
                 if (key && qty > 0) {
-                    const item = byKeyOf(combined)[key];
+                    payload.items.push({ key, qty });
+                    const item = items.find(i => i.key === key && i.branch_name === payload.branch);
                     if (item) item.stock += qty;
                 }
             });
@@ -466,32 +290,62 @@ function initInventory() {
         else if (action === 'stock_out') {
             const key = document.getElementById('stockOutIngredientSelect')?.value;
             const qty = parseFloat(document.getElementById('stockOutQtyInput')?.value) || 0;
+            payload.branch = currentBranch() === 'all' ? items[0]?.branch_name : currentBranch();
+            payload.reason = document.getElementById('stockOutReasonSelect')?.value || 'spoilage';
+
             if (key && qty > 0) {
-                const item = byKeyOf(combined)[key];
+                payload.items.push({ key, qty });
+                const item = items.find(i => i.key === key && (payload.branch === 'all' || i.branch_name === payload.branch));
                 if (item) item.stock = Math.max(0, item.stock - qty);
             }
         }
         else if (action === 'transfer') {
-            const from = document.getElementById('transferFromBranch')?.value;
-            const to = document.getElementById('transferToBranch')?.value;
-            if (from === to) {
+            payload.from_branch = document.getElementById('transferFromBranch')?.value;
+            payload.to_branch = document.getElementById('transferToBranch')?.value;
+
+            if (payload.from_branch === payload.to_branch) {
                 alert('Source and destination branches must be different.');
                 return;
             }
+
+            document.querySelectorAll('#transferRowsContainer .transfer-row').forEach(row => {
+                const key = row.querySelector('.transfer-item-select')?.value;
+                const qty = parseFloat(row.querySelector('.transfer-qty-input')?.value) || 0;
+
+                if (key && qty > 0) {
+                    payload.items.push({ key, qty });
+                    const sourceItem = items.find(i => i.key === key && i.branch_name === payload.from_branch);
+                    const destItem = items.find(i => i.key === key && i.branch_name === payload.to_branch);
+
+                    if (sourceItem) sourceItem.stock = Math.max(0, sourceItem.stock - qty);
+                    if (destItem) destItem.stock += qty;
+                }
+            });
         }
 
-        render();
+        if (payload.items.length === 0) return;
 
-        const modal = document.getElementById('inventoryActionModal');
-        if (modal) modal.hidden = true;
-        document.body.classList.remove('is-locked');
+        try {
+            const response = await fetch('/admin/inventory/operation', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+                body: JSON.stringify(payload)
+            });
+
+            const res = await response.json();
+            if (res.success) {
+                render();
+                document.getElementById('inventoryActionModal').hidden = true;
+                document.body.classList.remove('is-locked');
+            }
+        } catch (err) {
+            console.error('Failed to commit stock movement to DB:', err);
+        }
     });
 
-    // Row Builder Button Bindings
     document.getElementById('addStockInRowBtn')?.addEventListener('click', () => addStockInRow());
     document.getElementById('addTransferRowBtn')?.addEventListener('click', () => addTransferRow());
 
-    // Reset rows on modal open
     document.querySelector('[data-open-modal="inventoryActionModal"]')?.addEventListener('click', () => {
         if (document.getElementById('stockInRowsContainer')?.children.length === 0) addStockInRow();
     });
@@ -501,26 +355,34 @@ function initInventory() {
         renderTable();
     }
 
-    // Pagination Button Listeners
-    document.getElementById('inventoryPrevBtn')?.addEventListener('click', () => {
-        if (currentPage > 1) {
-            currentPage--;
-            renderTable();
-        }
+    ['stockBranch', 'stockBranchFilter'].forEach(id => {
+        document.getElementById(id)?.addEventListener('change', (e) => {
+            const val = e.target.value;
+            const otherId = id === 'stockBranch' ? 'stockBranchFilter' : 'stockBranch';
+            const other = document.getElementById(otherId);
+            if (other) other.value = val;
+            currentPage = 1;
+            render();
+        });
     });
 
-    document.getElementById('inventoryNextBtn')?.addEventListener('click', () => {
-        currentPage++;
-        renderTable();
-    });
-
-    // Tab & Filter Listeners
-    document.getElementById('tabRunningLow')?.addEventListener('click', filterToLowStock);
-    document.getElementById('tabAllItems')?.addEventListener('click', filterToAllItems);
-
-    ['stockSearch', 'stockBranchFilter', 'stockBranch', 'stockStatusFilter', 'stockUnitFilter'].forEach(id => {
+    ['stockSearch', 'stockStatusFilter', 'stockUnitFilter'].forEach(id => {
         document.getElementById(id)?.addEventListener('input', () => { currentPage = 1; render(); });
         document.getElementById(id)?.addEventListener('change', () => { currentPage = 1; render(); });
+    });
+
+    document.getElementById('tabRunningLow')?.addEventListener('click', () => {
+        const sf = document.getElementById('stockStatusFilter');
+        if (sf) sf.value = 'low';
+        currentPage = 1;
+        render();
+    });
+
+    document.getElementById('tabAllItems')?.addEventListener('click', () => {
+        const sf = document.getElementById('stockStatusFilter');
+        if (sf) sf.value = 'all';
+        currentPage = 1;
+        render();
     });
 
     render();

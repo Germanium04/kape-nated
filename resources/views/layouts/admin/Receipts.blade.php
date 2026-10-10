@@ -1,5 +1,3 @@
-@php use App\Support\DemoData; @endphp
-
 <x-admin.shell title="History" heading="Transaction history" subheading="Every order closed out across your branches, pulled from the staff terminal">
 
     <x-admin.panel title="Filter" note="Pick a branch and a range, then search within it">
@@ -35,19 +33,19 @@
 
             <label class="field-group" id="rangeDayWrap" hidden>
                 <span>Date</span>
-                <input type="date" class="field" id="rangeDay" value="2026-09-19">
+                <input type="date" class="field" id="rangeDay" value="{{ \Illuminate\Support\Carbon::today()->format('Y-m-d') }}">
             </label>
 
             <label class="field-group" id="rangeMonthWrap" hidden>
                 <span>Month</span>
-                <input type="month" class="field" id="rangeMonth" value="2026-09">
+                <input type="month" class="field" id="rangeMonth" value="{{ \Illuminate\Support\Carbon::today()->format('Y-m') }}">
             </label>
 
             <label class="field-group" id="rangeYearWrap" hidden>
                 <span>Year</span>
                 <select class="field" id="rangeYear">
-                    <option value="2026">2026</option>
-                    <option value="2025">2025</option>
+                    <option value="{{ \Illuminate\Support\Carbon::today()->format('Y') }}">{{ \Illuminate\Support\Carbon::today()->format('Y') }}</option>
+                    <option value="{{ \Illuminate\Support\Carbon::today()->subYear()->format('Y') }}">{{ \Illuminate\Support\Carbon::today()->subYear()->format('Y') }}</option>
                 </select>
             </label>
 
@@ -95,36 +93,33 @@
         </table>
 
         <p class="empty-note" id="receiptEmpty" hidden>No transaction matches that branch, range, or search. Widen the filter to see more.</p>
-    <!-- Add this directly below the </table> inside Receipts.blade.php -->
-    <div class="pagination-bar" id="receiptPagination" style="display: flex; align-items: center; justify-content: space-between; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border-color, #e5e5e5); flex-wrap: wrap; gap: 0.5rem;">
-        <span class="muted" id="pageInfo" style="font-size: 0.875rem;">Showing 1-10 of 0 transactions</span>
-        
-        <div style="display: flex; align-items: center; gap: 0.35rem;">
-            <button type="button" class="btn btn--ghost btn--sm" id="prevPageBtn" disabled>Previous</button>
+
+        <div class="pagination-bar" id="receiptPagination">
+            <span class="muted text-sm" id="pageInfo">Showing 1-10 of 0 transactions</span>
             
-            <!-- Dynamic Page Numbers Container -->
-            <div id="pageNumbers" style="display: flex; gap: 0.25rem;"></div>
-            
-            <button type="button" class="btn btn--ghost btn--sm" id="nextPageBtn" disabled>Next</button>
+            <div class="pagination-controls-group">
+                <button type="button" class="btn btn--ghost btn--sm" id="prevPageBtn" disabled>Previous</button>
+                <div id="pageNumbers" class="pagination-numbers-group"></div>
+                <button type="button" class="btn btn--ghost btn--sm" id="nextPageBtn" disabled>Next</button>
+            </div>
         </div>
-    </div>
     </x-admin.panel>
 
     <x-admin.panel title="Cash Drawer Audit" note="Reconcile physical cash counted against system total for the selected date">
-        <div class="filter-row" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; width: 100%;">
-            <label class="field-group" style="margin-bottom: 0;">
+        <div class="filter-row cash-audit-grid">
+            <label class="field-group">
                 <span>System Cash Takings</span>
-                <input type="text" class="field" id="reconExpected" value="₱0.00" readonly style="font-weight: 600; width: 100%;">
+                <input type="text" class="field field-bold field-full-width" id="reconExpected" value="₱0.00" readonly>
             </label>
 
-            <label class="field-group" style="margin-bottom: 0;">
+            <label class="field-group">
                 <span>Physical Cash Counted</span>
-                <input type="number" class="field" id="reconActual" placeholder="e.g. 15000" step="0.01" style="width: 100%;">
+                <input type="number" class="field field-full-width" id="reconActual" placeholder="e.g. 15000" step="0.01">
             </label>
 
-            <label class="field-group" style="margin-bottom: 0;">
+            <label class="field-group">
                 <span>Variance (Over / Short)</span>
-                <input type="text" class="field" id="reconVariance" value="₱0.00" readonly style="font-weight: 700; width: 100%;">
+                <input type="text" class="field field-heavy field-full-width" id="reconVariance" value="₱0.00" readonly>
             </label>
         </div>
     </x-admin.panel>

@@ -1,4 +1,3 @@
-
 :root {
     --bar:        #2b1a11;
     --ink:        #26180f;
@@ -103,9 +102,6 @@ a { color: inherit; }
     gap: 10px;
     font-size: 13px;
     color: #e0cdba;
-}
-
-.topbar-user {
     position: relative;
 }
 
@@ -182,7 +178,7 @@ a { color: inherit; }
     padding: 26px 24px 64px;
     display: flex;
     flex-direction: column;
-    gap: 18px;
+    gap: 18px !important;
 }
 
 .page-head h1 { font-size: 30px; }
@@ -191,6 +187,21 @@ a { color: inherit; }
     margin: 2px 0 0;
     color: var(--ink-soft);
     max-width: 68ch;
+}
+
+/* ---------- Screen Header Layout ---------- */
+.page-head-row {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+}
+
+/* Print Header Styles (Hidden on Web Screen) */
+.print-report-header {
+    display: none !important;
 }
 
 /* ---------- panels ---------- */
@@ -206,7 +217,7 @@ a { color: inherit; }
 .panel-head {
     display: flex;
     align-items: center;
-    justify-content: space-between; /* Keeps titles on left and primary buttons/actions on right */
+    justify-content: space-between;
     gap: 12px;
     flex-wrap: wrap;
     padding: 12px 18px;
@@ -250,6 +261,7 @@ a { color: inherit; }
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 12px;
+    margin-bottom: 0 !important;
 }
 
 .stat {
@@ -269,7 +281,7 @@ a { color: inherit; }
     font-size: 26px;
     margin: 4px 0 0;
     font-variant-numeric: tabular-nums;
-    text-align: right; /* Keeps number on the right side */
+    text-align: right;
 }
 
 .stat-value--sm { font-size: 19px; }
@@ -296,7 +308,7 @@ a { color: inherit; }
     color: var(--ink);
 }
 
-.btn--primary { background: var(--tan); text-decoration: none; display: block; margin-left: auto; width: fit-content;}
+.btn--primary { background: var(--tan); text-decoration: none; display: block; margin-left: auto; width: fit-content; }
 .btn--primary:hover { background: var(--tan-dark); color: #fff; }
 .btn--ghost { background: transparent; }
 .btn--ghost:hover { background: var(--tan-pale); }
@@ -325,7 +337,6 @@ a { color: inherit; }
 .field-group--grow { flex: 1 1 220px; }
 .field-group .field { min-width: 0; width: 100%; }
 
-
 .field-horizontal { display: flex; flex-direction: row; align-items: stretch; gap: 10%; }
 .field-vertical { display: flex; flex-direction: column; align-items: stretch; }
 
@@ -343,7 +354,6 @@ a { color: inherit; }
 
 .form-actions { display: flex; gap: 10px; margin-top: 4px; flex-wrap: wrap; }
 
-/* Guarantee identical height and box-sizing across form inputs */
 .field,
 .recipe-ing-select,
 .recipe-ing-amount {
@@ -353,9 +363,7 @@ a { color: inherit; }
     box-sizing: border-box !important;
 }
 
-.recipe-row {
-    align-items: center !important;
-}
+.recipe-row { align-items: center !important; }
 
 .checks {
     border: 1px dashed var(--line-soft);
@@ -466,17 +474,15 @@ a { color: inherit; }
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 16px;
-    align-items: stretch; /* Change from 'start' to 'stretch' */
+    align-items: stretch;
 }
 
-/* Ensure panels stretch to fill grid cell height */
 .grid-2 .panel {
     display: flex;
     flex-direction: column;
     height: 100%;
 }
 
-/* Push panel content nicely inside full-height panels */
 .grid-2 .panel-body {
     flex: 1;
     display: flex;
@@ -541,11 +547,6 @@ a { color: inherit; }
 
 .dot--cash  { background: var(--tan); }
 .dot--gcash { background: var(--tan-pale); }
-
-/* This spacing is only for the inline "Cash ● GCash ●" legend under the bar
-   chart. It used to live on .dot--gcash itself, which meant any other list
-   reusing the .dot class (like the payment-split cards) inherited an indent
-   it never asked for. Scoping it here is what actually fixes that. */
 .legend .dot--gcash { margin-left: 10px; }
 
 /* ---------- payment split ---------- */
@@ -877,20 +878,638 @@ a { color: inherit; }
     font-size: 12px;
 }
 
-/* ---------- print: receipt only ---------- */
+/* ---------- Utility & Component Layout Classes ---------- */
+.header-actions-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.branch-select-field { width: 220px; }
+
+.inventory-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 16px;
+    margin-bottom: 0 !important;
+}
+
+.tab-nav-row {
+    display: flex;
+    gap: 16px;
+    border-bottom: 1px solid var(--line-soft, #e5e5e5);
+    padding-bottom: 8px;
+    margin-bottom: 12px;
+}
+
+.tab-btn--active {
+    background: none;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+    border-bottom: 2px solid var(--primary, #a63d2a);
+    padding-bottom: 4px;
+    color: var(--primary, #a63d2a);
+}
+
+.tab-btn--inactive {
+    background: none;
+    border: none;
+    font-weight: 500;
+    cursor: pointer;
+    padding-bottom: 4px;
+    color: var(--muted, #666);
+}
+
+.tab-badge {
+    margin-left: 4px;
+    font-size: 11px;
+}
+
+.filter-grid-row {
+    display: flex;
+    gap: 12px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+}
+
+.filter-grid-row .field-group { margin-bottom: 0; }
+
+.fg-search { flex: 2; min-width: 200px; }
+.fg-branch { flex: 1; min-width: 160px; }
+.fg-status { flex: 1; min-width: 130px; }
+.fg-status-sm { flex: 1; min-width: 140px; }
+.fg-unit { flex: 1; min-width: 110px; }
+.fg-unit-sm { flex: 1; min-width: 120px; }
+
+.section-spacer-sm { display: none !important; }
+
+.pagination-wrapper {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line-soft, #e5e5e5);
+}
+
+.pagination-controls-group {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.pagination-numbers-group {
+    display: flex;
+    gap: 4px;
+}
+
+.modal-section-divider {
+    border: 0;
+    border-top: 1px dashed var(--line-soft, #d9c9b8);
+    margin-bottom: 16px;
+}
+
+.action-type-select {
+    font-weight: 600;
+    height: 42px;
+}
+
+.photo-upload-wrapper {
+    position: relative;
+    display: inline-block;
+}
+
+.photo-upload-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+.file-name-truncated {
+    font-size: 11px;
+    margin-top: 2px;
+    display: block;
+    max-width: 130px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.dynamic-rows-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.modal-section-label {
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.cash-audit-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    width: 100%;
+}
+
+.cash-audit-grid .field-group { margin-bottom: 0; }
+
+.field-full-width { width: 100%; }
+.field-bold { font-weight: 600; }
+.field-heavy { font-weight: 700; }
+
+.subhead-spaced { margin-top: 16px; }
+.panel-intro-spaced { margin-top: 10px; }
+
+/* ---------- Reports Module Specifics ---------- */
+.report-main-tabs {
+    display: flex;
+    gap: 24px;
+    border-bottom: 1px solid var(--line-soft, #d9c9b8);
+    margin-bottom: 0;
+}
+
+.report-tab-btn {
+    background: transparent;
+    border: none;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--ink-soft, #6b5748);
+    padding: 8px 4px;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+}
+
+.report-tab-btn.is-active {
+    color: var(--ink, #26180f);
+    border-bottom-color: var(--ink, #26180f);
+}
+
+.inv-sub-tabs {
+    display: flex;
+    gap: 12px;
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line-soft, #e5e5e5);
+}
+
+.inv-sub-tab-btn {
+    background: #f6ece0;
+    border: 1px solid var(--line-soft, #d9c9b8);
+    border-radius: 6px;
+    padding: 4px 12px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    color: var(--ink);
+}
+
+.inv-sub-tab-btn.is-active {
+    background: var(--tan-pale, #edd6ba);
+    border-color: var(--tan-dark, #b07c4c);
+    font-weight: 600;
+}
+
+.report-section-label {
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin: 0 !important;
+}
+
+.chip-badge {
+    background: #fffdfa;
+    border: 1px solid var(--line-soft);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: 600;
+    margin-left: 4px;
+}
+
+.stat-card {
+    background: #fffdfa;
+    border: 1px solid var(--line, #2a1a11);
+    border-radius: 8px;
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.stat-card-title {
+    margin: 0;
+    font-size: 13px;
+    color: var(--ink-soft);
+}
+
+.stat-card-value {
+    font-family: 'Baloo 2', sans-serif;
+    font-size: 30px;
+    font-weight: 700;
+    margin: 4px 0;
+    color: var(--ink);
+}
+
+.stat-card-value-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.stat-card-sub {
+    margin: 0;
+    font-size: 12px;
+    color: var(--ink-soft);
+}
+
+.muted-placeholder { color: #a09083; }
+
+.banner-notice {
+    background: #fff;
+    border: 1px solid var(--line-soft);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin: 0 !important;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.info-icon { font-size: 16px; }
+
+.pill-badge {
+    background: #f6ece0;
+    border: 1px solid var(--line-soft);
+    border-radius: 999px;
+    padding: 2px 10px;
+    font-size: 12px;
+    color: var(--ink-soft);
+}
+
+.branch-rank-list {
+    list-style: none;
+    padding: 0;
+    margin: 12px 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.branch-rank-list li {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.horizontal-bars-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: 16px 0 24px;
+}
+
+.hbar-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.hbar-label {
+    width: 130px;
+    font-size: 13.5px;
+}
+
+.hbar-track {
+    flex: 1;
+    height: 16px;
+    background: #f0e6da;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.hbar-fill {
+    height: 100%;
+    background: var(--tan, #cf9a6a);
+    border-radius: 4px;
+}
+
+.hbar-value {
+    width: 80px;
+    text-align: right;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.empty-state-box {
+    text-align: center;
+    padding: 32px 16px;
+    background: #faf6f0;
+    border: 1px dashed var(--line-soft);
+    border-radius: 8px;
+    margin-top: 8px;
+}
+
+.empty-state-title {
+    font-weight: 700;
+    margin: 0 0 4px;
+    color: var(--ink);
+}
+
+.empty-state-sub {
+    font-size: 13px;
+    color: var(--ink-soft);
+    max-width: 42ch;
+    margin: 0 auto;
+}
+
+.link-arrow {
+    display: inline-block;
+    margin-top: 12px;
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--tan-dark);
+    text-decoration: none;
+}
+
+.reconciliation-subhead {
+    background: #faf4ed;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.muted-tag {
+    font-weight: 600;
+    color: var(--flag);
+}
+
+.info-footer-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+}
+
+.info-footer-card {
+    background: #fffdfa;
+    border: 1px solid var(--line-soft);
+    border-radius: 8px;
+    padding: 14px 16px;
+}
+
+.info-footer-card h4 {
+    margin: 0 0 6px;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--ink);
+}
+
+.info-footer-card p {
+    margin: 0;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    line-height: 1.4;
+}
+
+/* ---------- Sales Over Time Height Constrained Chart Fix ---------- */
+.sales-chart-container {
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+    height: 180px;
+    padding-top: 24px;
+    padding-bottom: 8px;
+    box-sizing: border-box;
+    width: 100%;
+}
+
+.sales-chart-container .chart-col {
+    flex: 1;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 6px;
+    position: relative;
+}
+
+.sales-chart-container .chart-stack {
+    width: 100%;
+    max-width: 42px;
+    border: 1px solid var(--line, #2a1a11);
+    border-radius: 4px 4px 0 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.sales-chart-container .chart-value {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--ink-soft, #6b5748);
+    margin-bottom: 2px;
+}
+
+.sales-chart-container .chart-label {
+    font-size: 12px;
+    color: var(--ink-soft, #6b5748);
+    white-space: nowrap;
+}
+
+.chart-legend-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--ink-soft);
+    margin-top: 12px;
+}
+
+.dot--sales {
+    background: var(--tan, #cf9a6a);
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    display: inline-block;
+}
+
+/* =========================================================================
+   GLOBAL PANEL & SECTION SPACING (Dashboard-Standardized)
+   ========================================================================= */
+
+.page > .panel,
+.page > div > .panel,
+#sectionDrinksTab > .panel,
+#sectionIngredientsTab > .panel,
+#sectionSalesReport > .panel,
+#sectionInventoryReport > .panel {
+    margin-bottom: 0 !important;
+}
+
+#sectionDrinksTab,
+#sectionIngredientsTab,
+#sectionSalesReport,
+#sectionInventoryReport {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.section-divider-label {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    margin: 0 !important;
+}
+
+/* ---------- Print Media Queries & Color Preservation ---------- */
 @media print {
-    body { background: #fff; }
-    .topbar, .page, .modal-scrim, .modal-head, .modal-foot { display: none !important; }
-    .modal { position: static; padding: 0; }
-    .modal[hidden] { display: none !important; }
-    .modal-box { border: 0; max-width: 300px; }
-    .receipt { border: 0; }
+    * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    /* Hide Navigation, Screen Controls & Filter Bars */
+    .topbar,
+    .modal-scrim,
+    .modal-head,
+    .modal-foot,
+    .page-head-row,
+    .tab-nav-row,
+    .header-actions-wrapper,
+    #exportScopeSelect,
+    #btnExportReport {
+        display: none !important;
+    }
+
+    body {
+        background: #fff !important;
+        color: #000 !important;
+    }
+
+    /* Show Dedicated Executive Print Header */
+    .print-report-header {
+        display: block !important;
+        margin-bottom: 20px;
+    }
+
+    .print-header-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+    }
+
+    .print-title {
+        font-size: 22px;
+        margin: 0;
+        font-weight: 700;
+        color: var(--ink, #26180f);
+    }
+
+    .print-sub {
+        font-size: 12px;
+        margin: 2px 0 0;
+        color: var(--ink-soft, #6b5748);
+    }
+
+    .print-meta-box {
+        text-align: right;
+        font-size: 11px;
+        line-height: 1.5;
+        color: var(--ink-soft, #6b5748);
+    }
+
+    .print-meta-box p {
+        margin: 0;
+    }
+
+    .print-divider {
+        border: 0;
+        border-top: 2px solid var(--bar, #2b1a11);
+        margin: 12px 0;
+    }
+
+    /* Keep page container visible */
+    .page {
+        display: block !important;
+        max-width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    /* Render target report sections visible */
+    #sectionSalesReport:not([hidden]),
+    #sectionInventoryReport:not([hidden]) {
+        display: block !important;
+    }
+
+    /* Print-friendly panel styling */
+    .panel,
+    .stat-card {
+        border: 1px solid #d9c9b8 !important;
+        background: #fffdfa !important;
+        box-shadow: none !important;
+        page-break-inside: avoid;
+        margin-bottom: 16px !important;
+    }
+
+    .table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+    }
+
+    .table th,
+    .table td {
+        border-bottom: 1px solid #ddd !important;
+    }
+
+    /* Force colored bars, stacks, badges and split segments to render */
+    .chart-stack,
+    .chart-seg,
+    .hbar-fill,
+    .split-seg,
+    .badge,
+    .pay-card {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    /* Modal Receipt print fallback */
+    .modal {
+        position: static !important;
+        padding: 0 !important;
+    }
+
+    .modal[hidden] {
+        display: none !important;
+    }
+
+    .modal-box {
+        border: 0 !important;
+        max-width: 100% !important;
+    }
+
+    .receipt {
+        border: 0 !important;
+    }
 }
 
 /* ---------- responsive ---------- */
 @media (max-width: 960px) {
-    .stat-row { grid-template-columns: repeat(2, 1fr); }
+    .stat-row,
+    .inventory-stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
     .grid-2 { grid-template-columns: 1fr; }
+    .info-footer-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 640px) {
@@ -898,7 +1517,8 @@ a { color: inherit; }
     .topnav { gap: 14px; order: 3; width: 100%; }
     .page { padding: 18px 14px 48px; }
     .page-head h1 { font-size: 24px; }
-    .stat-row { grid-template-columns: 1fr; }
+    .stat-row,
+    .inventory-stats-grid { grid-template-columns: 1fr !important; }
     .panel-tools { width: 100%; }
     .field { min-width: 0; flex: 1; }
     .table { display: block; overflow-x: auto; white-space: nowrap; }

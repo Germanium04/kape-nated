@@ -14,8 +14,6 @@ class DatabaseSeeder extends Seeder
 {
     use WithoutModelEvents;
 
-    /* ------------------------------ data ------------------------------ */
-
     private const BRANCHES = ['Poblacion Main', 'Mabini Branch', 'Uptown Terminal', 'Riverside Stall', 'Airport Kiosk'];
 
     private const STAFF_BY_BRANCH = [
@@ -32,7 +30,6 @@ class DatabaseSeeder extends Seeder
         'Flavored Soda', 'Pearl Shakes',
     ];
 
-    /** key => [name, unit_type, unit, stock, reorder level, cost per unit]. */
     private const INGREDIENTS = [
         'beans'       => ['Espresso beans',    'weight', 'g',  120000, 1500, 1.20],
         'milk'        => ['Fresh milk',        'volume', 'ml', 500000, 5000, 0.09],
@@ -48,16 +45,12 @@ class DatabaseSeeder extends Seeder
         'ice'         => ['Ice',               'weight', 'g',  500000, 6000, 0.02],
         'cup16'       => ['Cups 16oz',         'count',  'pc', 15000,  200,  4.50],
         'lid'         => ['Dome lids',         'count',  'pc', 15000,  200,  1.75],
-        
-        // Fruit/Flavor Purees & Mixes
         'strawberry'  => ['Strawberry jam',    'weight', 'g',  60000,  500,  0.50],
         'blueberry'   => ['Blueberry jam',     'weight', 'g',  60000,  500,  0.55],
         'mango'       => ['Mango puree',       'weight', 'g',  60000,  500,  0.48],
         'pistachio'   => ['Pistachio sauce',   'weight', 'g',  50000,  400,  0.85],
         'biscoff'     => ['Biscoff spread',    'weight', 'g',  40000,  300,  0.90],
         'oreo'        => ['Oreo crumbs',       'weight', 'g',  50000,  400,  0.30],
-        
-        // Sodas & Addons
         'soda_base'   => ['Soda water',        'volume', 'ml', 150000, 2000, 0.05],
         'lychee_syp'  => ['Lychee syrup',      'volume', 'ml', 50000,  400,  0.32],
         'passion_syp' => ['Passion fruit syp', 'volume', 'ml', 50000,  400,  0.32],
@@ -67,20 +60,15 @@ class DatabaseSeeder extends Seeder
     ];
 
     private const MENU = [
-        // Special Sundaes
         'Chocolate Sundae'      => ['price' => 39,  'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Special Sundaes'],
         'Strawberry Sundae'     => ['price' => 39,  'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Special Sundaes'],
         'Caramel Sundae'        => ['price' => 39,  'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Special Sundaes'],
         'Mango Sundae'          => ['price' => 39,  'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Special Sundaes'],
         'Blueberry Sundae'      => ['price' => 39,  'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Special Sundaes'],
-
-        // Premium Sundaes
         'Affogato'              => ['price' => 75,  'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Premium Sundaes'],
         'Matcha Sundae'         => ['price' => 65,  'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Premium Sundaes'],
         'Biscoff Overload'      => ['price' => 90,  'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Premium Sundaes'],
         'Oreo Chocolate Sundae' => ['price' => 65,  'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Premium Sundaes'],
-
-        // Frappes & Floats
         'Oreo Frappe'           => ['price' => 130, 'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Frappe'],
         'Red Velvet Frappe'     => ['price' => 130, 'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Frappe'],
         'Strawberry Frappe'     => ['price' => 130, 'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Frappe'],
@@ -90,8 +78,6 @@ class DatabaseSeeder extends Seeder
         'Cake Float'            => ['price' => 55,  'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Frappe'],
         'Sprite Float'          => ['price' => 55,  'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Frappe'],
         'Orange Float'          => ['price' => 55,  'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Frappe'],
-
-        // Iced Coffee
         'Caramel Macchiato'     => ['price' => 65,  'venti' => 85,   'has_sizes' => true,  'has_temp' => true,  'cat' => 'Iced Coffee'],
         'Spanish Latte'         => ['price' => 65,  'venti' => 85,   'has_sizes' => true,  'has_temp' => true,  'cat' => 'Iced Coffee'],
         'Mocha Latte'           => ['price' => 65,  'venti' => 85,   'has_sizes' => true,  'has_temp' => true,  'cat' => 'Iced Coffee'],
@@ -101,23 +87,16 @@ class DatabaseSeeder extends Seeder
         'Hazelnut'              => ['price' => 65,  'venti' => 85,   'has_sizes' => true,  'has_temp' => true,  'cat' => 'Iced Coffee'],
         'Latte'                 => ['price' => 50,  'venti' => 60,   'has_sizes' => true,  'has_temp' => true,  'cat' => 'Iced Coffee'],
         'Americano'             => ['price' => 55,  'venti' => 65,   'has_sizes' => true,  'has_temp' => true,  'cat' => 'Iced Coffee'],
-
-        // Hot Coffee
         'Hot Espresso'          => ['price' => 55,  'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Hot Coffee'],
-
-        // Matcha & Flavored Series
         'Choco Matcha'          => ['price' => 70,  'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Matcha'],
         'Matcha Latte'          => ['price' => 55,  'venti' => null, 'has_sizes' => false, 'has_temp' => true,  'cat' => 'Matcha'],
         'Matcha Espresso'       => ['price' => 80,  'venti' => null, 'has_sizes' => false, 'has_temp' => true,  'cat' => 'Matcha'],
         'Strawberry Matcha'     => ['price' => 70,  'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Matcha'],
-
         'Strawberry'            => ['price' => 65,  'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Strawberry'],
         'Blueberry'             => ['price' => 65,  'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Blueberry'],
-
         'Pistachio Creme'       => ['price' => 60,  'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Pistachio'],
         'Pistachio Jolt'        => ['price' => 90,  'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Pistachio'],
         'Choco Stachio'         => ['price' => 75,  'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Pistachio'],
-
         'Lychee Soda'           => ['price' => 50,  'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Flavored Soda'],
         'Passion Fruit Soda'    => ['price' => 50,  'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Flavored Soda'],
         'Strawberry Soda'       => ['price' => 50,  'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Flavored Soda'],
@@ -135,7 +114,6 @@ class DatabaseSeeder extends Seeder
         'Matcha Sundae'         => ['ice_cream' => 120, 'matcha' => 10, 'condensed' => 15, 'cup16' => 1],
         'Biscoff Overload'      => ['ice_cream' => 130, 'biscoff' => 35, 'cup16' => 1],
         'Oreo Chocolate Sundae' => ['ice_cream' => 120, 'choco' => 20, 'oreo' => 25, 'cup16' => 1],
-
         'Oreo Frappe'           => ['milk' => 150, 'ice' => 200, 'cream' => 25, 'oreo' => 30, 'cup16' => 1, 'lid' => 1],
         'Red Velvet Frappe'     => ['milk' => 160, 'ice' => 200, 'cream' => 25, 'vanilla' => 20, 'cup16' => 1, 'lid' => 1],
         'Strawberry Frappe'     => ['milk' => 140, 'ice' => 200, 'cream' => 25, 'strawberry' => 35, 'cup16' => 1, 'lid' => 1],
@@ -145,7 +123,6 @@ class DatabaseSeeder extends Seeder
         'Cake Float'            => ['soda_base' => 180, 'ice_cream' => 80, 'cup16' => 1, 'lid' => 1],
         'Sprite Float'          => ['soda_base' => 200, 'ice_cream' => 80, 'cup16' => 1, 'lid' => 1],
         'Orange Float'          => ['soda_base' => 200, 'ice_cream' => 80, 'cup16' => 1, 'lid' => 1],
-
         'Caramel Macchiato'     => ['beans' => 18, 'milk' => 180, 'caramel' => 30, 'cup16' => 1, 'lid' => 1],
         'Spanish Latte'         => ['beans' => 18, 'milk' => 200, 'condensed' => 25, 'cup16' => 1, 'lid' => 1],
         'Mocha Latte'           => ['beans' => 18, 'milk' => 180, 'choco' => 30, 'cup16' => 1, 'lid' => 1],
@@ -156,7 +133,6 @@ class DatabaseSeeder extends Seeder
         'Latte'                 => ['beans' => 18, 'milk' => 220, 'cup16' => 1, 'lid' => 1],
         'Americano'             => ['beans' => 18, 'ice' => 150, 'cup16' => 1, 'lid' => 1],
         'Hot Espresso'          => ['beans' => 18, 'cup16' => 1],
-
         'Choco Matcha'          => ['matcha' => 10, 'milk' => 180, 'choco' => 25, 'cup16' => 1, 'lid' => 1],
         'Matcha Latte'          => ['matcha' => 12, 'milk' => 210, 'cup16' => 1, 'lid' => 1],
         'Matcha Espresso'       => ['matcha' => 10, 'beans' => 18, 'milk' => 180, 'cup16' => 1, 'lid' => 1],
@@ -166,7 +142,6 @@ class DatabaseSeeder extends Seeder
         'Pistachio Creme'       => ['milk' => 200, 'pistachio' => 35, 'cream' => 15, 'cup16' => 1, 'lid' => 1],
         'Pistachio Jolt'        => ['beans' => 18, 'milk' => 180, 'pistachio' => 35, 'cup16' => 1, 'lid' => 1],
         'Choco Stachio'         => ['milk' => 180, 'choco' => 20, 'pistachio' => 25, 'cup16' => 1, 'lid' => 1],
-
         'Lychee Soda'           => ['soda_base' => 220, 'lychee_syp' => 35, 'ice' => 150, 'cup16' => 1, 'lid' => 1],
         'Passion Fruit Soda'    => ['soda_base' => 220, 'passion_syp' => 35, 'ice' => 150, 'cup16' => 1, 'lid' => 1],
         'Strawberry Soda'       => ['soda_base' => 220, 'strawberry' => 35, 'ice' => 150, 'cup16' => 1, 'lid' => 1],
@@ -198,8 +173,6 @@ class DatabaseSeeder extends Seeder
         'Rainbow Jelly' => ['Flavored Soda'],
     ];
 
-    /* ------------------------------- run ------------------------------ */
-
     public function run(): void
     {
         DB::transaction(function () {
@@ -208,17 +181,14 @@ class DatabaseSeeder extends Seeder
             $drinkTypeIds  = $this->drinkTypes();
             $ingredientIds = $this->ingredients();
             
-            // Seed branch-specific inventory stocks for every branch & ingredient
             $this->branchInventory($branchIds, $ingredientIds);
 
-            $menuIds       = $this->menu($drinkTypeIds, $ingredientIds);
-            $addons        = $this->addons($ingredientIds, $drinkTypeIds);
+            $menuIds = $this->menu($drinkTypeIds, $ingredientIds);
+            $addons  = $this->addons($ingredientIds, $drinkTypeIds);
             
             $this->orders($branchIds, $staffByBranch, $menuIds, $addons);
         });
     }
-
-    /* ---------------------------------------------------------------- */
 
     private function branches(): array
     {
@@ -270,12 +240,12 @@ class DatabaseSeeder extends Seeder
     {
         $ids = [];
         foreach (self::INGREDIENTS as $key => [$name, $unitType, $unit, $stock, $reorder, $cost]) {
-            // Global master ingredient details
             $ids[$key] = $this->put('ingredients', ['key' => $key], [
                 'name'          => $name,
                 'unit_type'     => $unitType,
                 'unit'          => $unit,
                 'cost'          => $cost,
+                'reorder_level' => $reorder,
                 'is_active'     => true,
             ]);
         }
@@ -354,12 +324,12 @@ class DatabaseSeeder extends Seeder
 
     private function orders(array $branchIds, array $staffByBranch, array $menuIds, array $addons): void
     {
-        if (DB::table('orders')->exists()) {
-            return;
-        }
+        DB::table('order_item_addon')->delete();
+        DB::table('order_items')->delete();
+        DB::table('stock_movements')->delete();
+        DB::table('orders')->delete();
 
         $pick = fn (array $list) => $list[array_rand($list)];
-
         $itemNames = array_keys(self::MENU);
 
         $addonsByCategory = [];
@@ -377,23 +347,19 @@ class DatabaseSeeder extends Seeder
 
         foreach ($branchIds as $branch => $branchId) {
             $staff = $staffByBranch[$branch] ?? [];
-            if (! $staff) {
-                continue;
-            }
+            if (!$staff) continue;
 
             for ($ago = 6; $ago >= 0; $ago--) {
-                $perDay = rand(3, 6);
+                $perDay = rand(6, 12);
 
                 for ($n = 0; $n < $perDay; $n++) {
                     if ($ago === 0) {
-                        // For TODAY: Spread orders up to current hour
                         $maxHour = max(7, $nowPh->hour);
                         $at = $nowPh->copy()->setTime(rand(7, $maxHour), rand(0, 59));
                         if ($at->isFuture()) {
                             $at = $nowPh->copy()->subMinutes(rand(2, 45));
                         }
                     } else {
-                        // For PREVIOUS DAYS: Spread orders between 7 AM and 7 PM
                         $at = $nowPh->copy()->subDays($ago)->setTime(rand(7, 19), rand(0, 59));
                     }
 
@@ -428,7 +394,6 @@ class DatabaseSeeder extends Seeder
         }
 
         usort($plans, fn ($a, $b) => $a['at'] <=> $b['at']);
-
         $ingredientKeyToId = DB::table('ingredients')->pluck('id', 'key')->all();
 
         foreach ($plans as $i => $plan) {
@@ -502,8 +467,6 @@ class DatabaseSeeder extends Seeder
             }
         }
     }
-    
-    /* ---------------------------- helpers ---------------------------- */
 
     private function put(string $table, array $match, array $values = []): int
     {

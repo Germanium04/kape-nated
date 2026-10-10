@@ -1,9 +1,9 @@
 <x-admin.shell title="Inventory" heading="Inventory" subheading="Manage stock levels and record replenishments across branches.">
 
     <x-slot:headerActions>
-        <div style="display: flex; align-items: center; gap: 8px;">
-            <span class="muted" style="font-size: 13px;">Branch</span>
-            <select class="field" id="stockBranch" style="width: 220px;">
+        <div class="header-actions-wrapper">
+            <span class="muted text-sm">Branch</span>
+            <select class="field branch-select-field" id="stockBranch">
                 <option value="all">All Branches (combined)</option>
                 @foreach(array_keys($branchWeights) as $branch)
                     <option value="{{ $branch }}">{{ $branch }}</option>
@@ -12,29 +12,27 @@
         </div>
     </x-slot:headerActions>
 
-    <!-- Stat Cards Row (Aligned 3 Equal Columns) -->
-    <div class="stat-row" id="inventoryStats" style="grid-template-columns: repeat(3, 1fr) !important; margin-bottom: 16px;"></div>
+    <!-- Stat Cards Row -->
+    <div class="stat-row inventory-stats-grid" id="inventoryStats"></div>
 
     <!-- Filter Panel -->
     <x-admin.panel title="" note="">
-        <!-- Quick Filter Tabs -->
-        <div class="tab-row" style="display: flex; gap: 16px; border-bottom: 1px solid var(--line-soft, #e5e5e5); padding-bottom: 10px; margin-bottom: 16px;">
-            <button type="button" class="tab-btn is-active" id="tabRunningLow" style="background: none; border: none; font-weight: 600; cursor: pointer; border-bottom: 2px solid var(--primary, #a63d2a); padding-bottom: 6px; color: var(--primary, #a63d2a);">
-                Running low <span id="runningLowBadge" class="badge badge--out" style="margin-left: 4px; font-size: 11px;">0</span>
+        <div class="tab-nav-row">
+            <button type="button" class="tab-btn tab-btn--active" id="tabRunningLow">
+                Running low <span id="runningLowBadge" class="badge badge--out tab-badge">0</span>
             </button>
-            <button type="button" class="tab-btn" id="tabAllItems" style="background: none; border: none; font-weight: 500; cursor: pointer; padding-bottom: 6px; color: var(--muted, #666);">
+            <button type="button" class="tab-btn tab-btn--inactive" id="tabAllItems">
                 All items
             </button>
         </div>
 
-        <!-- Filter Controls Row -->
-        <div class="filter-row" style="display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap;">
-            <label class="field-group" style="flex: 2; min-width: 200px;">
+        <div class="filter-grid-row">
+            <label class="field-group fg-search">
                 <span>Search inventory</span>
                 <input type="search" class="field" id="stockSearch" placeholder="🔍 Search by item name">
             </label>
 
-            <label class="field-group" style="flex: 1; min-width: 160px;">
+            <label class="field-group fg-branch">
                 <span>Branch Filter</span>
                 <select class="field" id="stockBranchFilter">
                     <option value="all">All Branches (combined)</option>
@@ -44,7 +42,7 @@
                 </select>
             </label>
 
-            <label class="field-group" style="flex: 1; min-width: 130px;">
+            <label class="field-group fg-status">
                 <span>Stock status</span>
                 <select class="field" id="stockStatusFilter">
                     <option value="all">All statuses</option>
@@ -54,7 +52,7 @@
                 </select>
             </label>
 
-            <label class="field-group" style="flex: 1; min-width: 110px;">
+            <label class="field-group fg-unit">
                 <span>Unit</span>
                 <select class="field" id="stockUnitFilter">
                     <option value="all">All units</option>
@@ -66,85 +64,90 @@
         </div>
     </x-admin.panel>
 
+    <div class="section-spacer-sm"></div>
+
     <!-- Ingredients Live Stock Room Panel -->
     <x-admin.panel title="Ingredients Stock Room" note="On-hand stock levels update dynamically as POS orders are fulfilled">
         <x-slot:tools>
-            <button type="button" class="btn btn--ghost btn--sm" data-open-modal="addIngredientModal">+ Master Directory</button>
             <button type="button" class="btn btn--primary btn--sm" data-open-modal="inventoryActionModal">📦 Manage Inventory</button>
         </x-slot:tools>
 
         <table class="table" id="stockTable">
             <thead>
                 <tr>
+                    <th>Branch</th>
                     <th>Ingredient</th>
                     <th class="ta-r">On hand</th>
-                    <th class="ta-r">Used, this rate</th>
+                    <th class="ta-r">Used today</th>
                     <th class="ta-r">Reorder at</th>
-                    <th class="ta-r">Est. Runout</th>
                     <th>Status</th>
                     <th class="ta-r">Stock value</th>
-                    <th class="ta-r">Action</th>
                 </tr>
             </thead>
             <tbody><!-- rendered by JS --></tbody>
         </table>
 
-        <!-- Pagination Bar -->
-        <div id="inventoryPagination" class="pagination-bar" hidden style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line-soft, #e5e5e5);">
-            <span id="inventoryPageInfo" class="muted" style="font-size: 13px;">Showing 1–10 of 0 items</span>
-            <div class="pagination-controls" style="display: flex; gap: 6px; align-items: center;">
-                <button type="button" id="inventoryPrevBtn" class="btn btn--ghost btn--sm">&laquo; Prev</button>
-                <div id="inventoryPageNumbers" style="display: flex; gap: 4px;"></div>
-                <button type="button" id="inventoryNextBtn" class="btn btn--ghost btn--sm">Next &raquo;</button>
+        <!-- Receipts-style Pagination Bar -->
+        <div id="inventoryPagination" class="pagination-bar pagination-wrapper" hidden>
+            <span id="inventoryPageInfo" class="muted text-sm">Showing 1–10 of 0 items</span>
+            <div class="pagination-controls-group">
+                <button type="button" id="inventoryPrevBtn" class="btn btn--ghost btn--sm">Previous</button>
+                <div id="inventoryPageNumbers" class="pagination-numbers-group"></div>
+                <button type="button" id="inventoryNextBtn" class="btn btn--ghost btn--sm">Next</button>
             </div>
         </div>
     </x-admin.panel>
 
-    <!-- Modal 1: Master Directory - Register New Raw Ingredient -->
+    <!-- Modal 1: Register New Raw Ingredient -->
     <x-admin.modal id="addIngredientModal" title="Register New Raw Ingredient" size="md">
         <p class="panel-intro">Register a brand new raw ingredient into the system's global master list.</p>
 
-        <div class="field-horizontal" style="gap: 12px; margin-bottom: 12px;">
-            <label class="field-group" style="flex: 2;">
+        <div class="field-horizontal form-row-spacing">
+            <label class="field-group fg-search">
                 <span>Ingredient Name</span>
                 <input type="text" class="field" id="invIngName" placeholder="e.g. Oat Milk">
             </label>
-            
-            <label class="field-group" style="flex: 1;">
+            <label class="field-group fg-branch">
                 <span>Category (Optional)</span>
                 <input type="text" class="field" id="invIngCategory" placeholder="e.g. Dairy, Syrup">
             </label>
         </div>
 
-        <div class="field-horizontal" style="gap: 12px; margin-bottom: 12px;">
-        <!-- Step 1: Select Measurement Type -->
-        <label class="field-group" style="flex: 1;">
-            <span>Measurement Type</span>
-            <select class="field" id="invIngUnitType">
-                <option value="volume">Liquid / Volume (ml)</option>
-                <option value="weight">Solid / Weight (g)</option>
-                <option value="count">Item Count / Pieces (pc)</option>
-            </select>
-        </label>
+        <div class="field-horizontal form-row-spacing">
+            <label class="field-group fg-branch">
+                <span>Measurement Type</span>
+                <select class="field" id="invIngUnitType">
+                    <option value="volume">Liquid / Volume (ml)</option>
+                    <option value="weight">Solid / Weight (g)</option>
+                    <option value="count">Item Count / Pieces (pc)</option>
+                </select>
+            </label>
 
-        <!-- Step 2: Packaging Unit (Auto-filtered by JS) -->
-        <label class="field-group" style="flex: 1;">
-            <span>Purchase Packaging</span>
-            <select class="field" id="invIngPurchaseUnit">
-                <option value="1L Bottle" data-factor="1000">1 Liter Bottle (1,000 ml)</option>
-                <option value="Gallon" data-factor="3785.41">Gallon (3,785.41 ml)</option>
-                <option value="500ml Pack" data-factor="500">500ml Pack</option>
-            </select>
-        </label>
-    </div>
+            <label class="field-group fg-branch">
+                <span>Base Unit</span>
+                <select class="field" id="invIngBaseUnit">
+                    <option value="ml">Milliliters (ml)</option>
+                    <option value="g">Grams (g)</option>
+                    <option value="pc">Pieces (pc)</option>
+                </select>
+            </label>
 
-        <div class="field-horizontal" style="gap: 12px;">
-            <label class="field-group" style="flex: 1;">
+            <label class="field-group fg-branch">
+                <span>Purchase Packaging</span>
+                <select class="field" id="invIngPurchaseUnit">
+                    <option value="1L Bottle" data-factor="1000">1 Liter Bottle (1,000 ml)</option>
+                    <option value="Gallon" data-factor="3785.41">Gallon (3,785.41 ml)</option>
+                    <option value="500ml Pack" data-factor="500">500ml Pack</option>
+                </select>
+            </label>
+        </div>
+
+        <div class="field-horizontal">
+            <label class="field-group fg-branch">
                 <span>Reorder Point (Base Unit)</span>
                 <input type="number" step="any" inputmode="decimal" class="field" id="invIngReorder" placeholder="e.g. 1000">
             </label>
-            
-            <label class="field-group" style="flex: 1;">
+            <label class="field-group fg-branch">
                 <span>Estimated Cost per Base Unit (₱)</span>
                 <input type="number" step="any" inputmode="decimal" class="field" id="invIngCost" placeholder="e.g. 0.15">
             </label>
@@ -156,24 +159,24 @@
         </x-slot:footer>
     </x-admin.modal>
 
-    <!-- Modal 2: Dynamic Inventory Action Modal (Stock Movement Transactions) -->
+    <!-- Modal 2: Dynamic Operations Modal -->
     <x-admin.modal id="inventoryActionModal" title="Stock Operation" size="md">
-        <label class="field-group" style="margin-bottom: 16px;">
-            <span style="font-weight: 600; color: var(--ink, #26180f);">Select Action Type</span>
-            <select class="field" id="invActionType" style="font-weight: 600; height: 42px;">
+        <label class="field-group form-row-spacing">
+            <span class="text-ink-bold">Select Action Type</span>
+            <select class="field action-type-select" id="invActionType">
                 <option value="stock_in">📦 Stock Delivery (Stock-In)</option>
                 <option value="stock_out">🗑️ Stock Deduction / Spoilage (Stock-Out)</option>
                 <option value="transfer">↔ Branch Stock Transfer</option>
             </select>
         </label>
 
-        <hr style="border: 0; border-top: 1px dashed var(--line-soft, #d9c9b8); margin-bottom: 16px;">
+        <hr class="modal-section-divider">
 
         <!-- SECTION 1: Batch Stock-In -->
         <div id="secStockIn" class="action-section">
             <p class="panel-intro">Log a delivery containing one or multiple ingredients into a branch's stock room.</p>
-            <div class="field-horizontal" style="gap: 12px; margin-bottom: 12px;">
-                <label class="field-group" style="flex: 1;">
+            <div class="field-horizontal form-row-spacing">
+                <label class="field-group fg-branch">
                     <span>Receiving Branch</span>
                     <select class="field" id="stockInBranch">
                         @foreach(array_keys($branchWeights) as $branch)
@@ -182,27 +185,27 @@
                     </select>
                 </label>
 
-                <label class="field-group" style="flex: 1;">
+                <label class="field-group fg-branch">
                     <span>Supplier / Invoice No.</span>
                     <input type="text" class="field" id="stockInRef" placeholder="e.g. Invoice #1042">
                 </label>
             </div>
 
-            <p class="panel-intro" style="margin-bottom: 8px; font-weight: 600;">Delivered Items:</p>
-            <div id="stockInRowsContainer" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;"></div>
+            <p class="panel-intro modal-section-label">Delivered Items:</p>
+            <div id="stockInRowsContainer" class="dynamic-rows-container"></div>
             <button type="button" class="btn btn--ghost btn--sm" id="addStockInRowBtn">+ Add Another Item</button>
         </div>
 
         <!-- SECTION 2: Stock-Out / Spoilage -->
         <div id="secStockOut" class="action-section" hidden>
             <p class="panel-intro">Log manual inventory deductions for spoilage, damage, spills, or audit adjustments.</p>
-            <div class="field-horizontal" style="gap: 12px; margin-bottom: 12px;">
-                <label class="field-group" style="flex: 2;">
+            <div class="field-horizontal form-row-spacing">
+                <label class="field-group fg-search">
                     <span>Ingredient</span>
                     <select class="field" id="stockOutIngredientSelect"></select>
                 </label>
 
-                <label class="field-group" style="flex: 1;">
+                <label class="field-group fg-branch">
                     <span>Deduction Qty</span>
                     <input type="number" step="any" inputmode="decimal" class="field" id="stockOutQtyInput" placeholder="e.g. 500">
                 </label>
@@ -222,8 +225,8 @@
         <!-- SECTION 3: Inter-Branch Stock Transfer -->
         <div id="secTransfer" class="action-section" hidden>
             <p class="panel-intro">Transfer stock items from a source branch to a destination branch.</p>
-            <div class="field-horizontal" style="gap: 12px; margin-bottom: 12px;">
-                <label class="field-group" style="flex: 1;">
+            <div class="field-horizontal form-row-spacing">
+                <label class="field-group fg-branch">
                     <span>From (Source Branch)</span>
                     <select class="field" id="transferFromBranch">
                         @foreach(array_keys($branchWeights) as $branch)
@@ -232,7 +235,7 @@
                     </select>
                 </label>
 
-                <label class="field-group" style="flex: 1;">
+                <label class="field-group fg-branch">
                     <span>To (Destination Branch)</span>
                     <select class="field" id="transferToBranch">
                         @foreach(array_keys($branchWeights) as $branch)
@@ -242,8 +245,8 @@
                 </label>
             </div>
 
-            <p class="panel-intro" style="margin-bottom: 8px; font-weight: 600;">Transfer Items:</p>
-            <div id="transferRowsContainer" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;"></div>
+            <p class="panel-intro modal-section-label">Transfer Items:</p>
+            <div id="transferRowsContainer" class="dynamic-rows-container"></div>
             <button type="button" class="btn btn--ghost btn--sm" id="addTransferRowBtn">+ Add Item to Transfer</button>
         </div>
 
