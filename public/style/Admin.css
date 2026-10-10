@@ -206,6 +206,7 @@ a { color: inherit; }
 .panel-head {
     display: flex;
     align-items: center;
+    justify-content: space-between; /* Keeps titles on left and primary buttons/actions on right */
     gap: 12px;
     flex-wrap: wrap;
     padding: 12px 18px;
@@ -268,6 +269,7 @@ a { color: inherit; }
     font-size: 26px;
     margin: 4px 0 0;
     font-variant-numeric: tabular-nums;
+    text-align: right; /* Keeps number on the right side */
 }
 
 .stat-value--sm { font-size: 19px; }
@@ -294,7 +296,7 @@ a { color: inherit; }
     color: var(--ink);
 }
 
-.btn--primary { background: var(--tan); text-decoration: none; color:}
+.btn--primary { background: var(--tan); text-decoration: none; display: block; margin-left: auto; width: fit-content;}
 .btn--primary:hover { background: var(--tan-dark); color: #fff; }
 .btn--ghost { background: transparent; }
 .btn--ghost:hover { background: var(--tan-pale); }
@@ -450,7 +452,22 @@ a { color: inherit; }
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 16px;
-    align-items: start;
+    align-items: stretch; /* Change from 'start' to 'stretch' */
+}
+
+/* Ensure panels stretch to fill grid cell height */
+.grid-2 .panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+/* Push panel content nicely inside full-height panels */
+.grid-2 .panel-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
 }
 
 /* ---------- chart ---------- */
@@ -546,6 +563,15 @@ a { color: inherit; }
 }
 
 .split-legend b { margin-left: auto; font-variant-numeric: tabular-nums; }
+
+.pagination-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 12px;
+    margin-top: 12px;
+    border-top: 1px solid var(--line-soft);
+}
 
 .pay-cards {
     display: grid;

@@ -1,6 +1,6 @@
 @php use App\Support\DemoData; @endphp
 
-<x-admin.shell title="Receipts" heading="Transaction history" subheading="Every order closed out across your branches, pulled from the staff terminal">
+<x-admin.shell title="History" heading="Transaction history" subheading="Every order closed out across your branches, pulled from the staff terminal">
 
     <x-admin.panel title="Filter" note="Pick a branch and a range, then search within it">
         <div class="filter-row">

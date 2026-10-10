@@ -4,58 +4,67 @@ namespace Database\Seeders;
 
 use App\Models\Branch;
 use App\Models\User;
-use App\Support\DemoData;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
-/**
- * One seeder for everything. Safe to run again: every table is matched on a
- * natural key (name / key / order_no) and updated or skipped, never duplicated.
- *
- * Order matters because of foreign keys:
- * branches -> users -> drink_types -> ingredients -> menu_items (+recipes)
- * -> addons (+recipes) -> orders (+items, +item addons)
- *
- * The menu below is the real board (photographed Sep 2026), not DemoData's
- * placeholder prices.
- *
- *  - price        = the base price (Grande, or the only price)
- *  - venti        = the Venti price, only for drinks that have sizes
- *  - has_sizes    = till shows a size choice (Grande / Venti, or Small cone / Giant swirl for Cones)
- *  - has_temp     = till shows a Hot / Cold choice
- *  - ADDON_TYPES  = which drink types each add-on may go on (addon_drink_type)
- *
- * Sundaes have no size, no temperature and no add-ons: one price each. The cone is the
- * only soft-serve item with a size choice.
- * Demo orders are generated for the LAST 7 DAYS relative to today (so the staff
- * dashboard always has data) and only when the orders table is empty. To get a
- * fresh set dated from today, run `php artisan migrate:fresh --seed`.
- */
+
 class DatabaseSeeder extends Seeder
 {
     use WithoutModelEvents;
 
-    /** name => price, venti price, has_sizes, has_temp, drink type. */
+    /* ------------------------------ data ------------------------------ */
+
+    private const BRANCHES = ['Poblacion Main', 'Mabini Branch', 'Uptown Terminal', 'Riverside Stall', 'Airport Kiosk'];
+
+    /** Two staff per branch. Login = first name in lowercase (jhen, marco, kate...). */
+    private const STAFF_BY_BRANCH = [
+        'Poblacion Main'  => ['Jhen R.', 'Marco D.'],
+        'Mabini Branch'   => ['Kate L.', 'Noel S.'],
+        'Uptown Terminal' => ['Ria P.', 'Aldrin V.'],
+        'Riverside Stall' => ['Trisha M.', 'Benjie C.'],
+        'Airport Kiosk'   => ['Lia F.', 'Oscar T.'],
+    ];
+
+    private const DRINK_TYPES = [
+        'Special Sundaes', 'Premium Sundaes', 'Iced Coffee Float', 'Non-Coffee Float', 'Frappe',
+        'Iced Coffee', 'Hot Coffee', 'Matcha', 'Strawberry', 'Blueberry', 'Pistachio', 'Choco',
+        'Flavored Soda', 'Pearl Shakes',
+    ];
+
+    /** key => [name, unit, stock, reorder level, cost per unit]. */
+    private const INGREDIENTS = [
+        'beans'     => ['Espresso beans',  'g',  2480,  1500, 1.20],
+        'milk'      => ['Fresh milk',      'ml', 4200,  5000, 0.09],
+        'caramel'   => ['Caramel syrup',   'ml', 620,   600,  0.35],
+        'vanilla'   => ['Vanilla syrup',   'ml', 1150,  600,  0.35],
+        'hazelnut'  => ['Hazelnut syrup',  'ml', 340,   600,  0.38],
+        'choco'     => ['Chocolate sauce', 'ml', 980,   700,  0.42],
+        'condensed' => ['Condensed milk',  'ml', 1320,  800,  0.28],
+        'matcha'    => ['Matcha powder',   'g',  190,   250,  4.50],
+        'cream'     => ['Whipping cream',  'g',  1450,  900,  0.65],
+        'ice'       => ['Ice',             'g',  12000, 6000, 0.02],
+        'cup16'     => ['Cups 16oz',       'pc', 143,   200,  4.50],
+        'lid'       => ['Dome lids',       'pc', 410,   200,  1.75],
+    ];
+
+    /**
+     * name => price (Grande / only size), venti price, has sizes, has hot/cold, category.
+     * Taken from the menu board. Only the drinks in RECIPES below have a recipe so far.
+     */
     private const MENU = [
-        // Special Sundaes — ₱39 each (single size, no hot option)
-        'Chocolate Sundae'      => ['price' => 39, 'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Special Sundaes'],
-        'Strawberry Sundae'     => ['price' => 39, 'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Special Sundaes'],
-        'Caramel Sundae'        => ['price' => 39, 'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Special Sundaes'],
-        'Mango Sundae'          => ['price' => 39, 'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Special Sundaes'],
-        'Blueberry Sundae'      => ['price' => 39, 'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Special Sundaes'],
+        'Chocolate Sundae'      => ['price' => 39,  'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Special Sundaes'],
+        'Strawberry Sundae'     => ['price' => 39,  'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Special Sundaes'],
+        'Caramel Sundae'        => ['price' => 39,  'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Special Sundaes'],
+        'Mango Sundae'          => ['price' => 39,  'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Special Sundaes'],
+        'Blueberry Sundae'      => ['price' => 39,  'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Special Sundaes'],
 
-        // Soft serve cone — Small cone ₱18 / Giant swirl ₱28 (the only choice; no hot/cold, no add-ons)
-        'Soft Serve Cone'       => ['price' => 18, 'venti' => 28, 'has_sizes' => true,  'has_temp' => false, 'cat' => 'Cones'],
+        'Affogato'              => ['price' => 75,  'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Premium Sundaes'],
+        'Matcha Sundae'         => ['price' => 65,  'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Premium Sundaes'],
+        'Biscoff Overload'      => ['price' => 90,  'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Premium Sundaes'],
+        'Oreo Chocolate Sundae' => ['price' => 65,  'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Premium Sundaes'],
 
-        // Premium Sundaes (single size, no hot option)
-        'Affogato'              => ['price' => 75, 'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Premium Sundaes'],
-        'Matcha Sundae'         => ['price' => 65, 'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Premium Sundaes'],
-        'Biscoff Overload'      => ['price' => 90, 'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Premium Sundaes'],
-        'Oreo Chocolate Sundae' => ['price' => 65, 'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Premium Sundaes'],
-
-        // Frappe & Floats
         'Oreo Frappe'           => ['price' => 130, 'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Frappe'],
         'Red Velvet Frappe'     => ['price' => 130, 'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Frappe'],
         'Strawberry Frappe'     => ['price' => 130, 'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Frappe'],
@@ -66,85 +75,84 @@ class DatabaseSeeder extends Seeder
         'Sprite Float'          => ['price' => 55,  'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Frappe'],
         'Orange Float'          => ['price' => 55,  'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Frappe'],
 
-        // Iced / Hot Coffee — Supports Grande (₱65) / Venti (₱85) & Hot/Cold
-        'Caramel Macchiato'     => ['price' => 65, 'venti' => 85, 'has_sizes' => true, 'has_temp' => true, 'cat' => 'Iced Coffee'],
-        'Spanish Latte'         => ['price' => 65, 'venti' => 85, 'has_sizes' => true, 'has_temp' => true, 'cat' => 'Iced Coffee'],
-        'Mocha Latte'           => ['price' => 65, 'venti' => 85, 'has_sizes' => true, 'has_temp' => true, 'cat' => 'Iced Coffee'],
-        'Vanilla Latte'         => ['price' => 65, 'venti' => 85, 'has_sizes' => true, 'has_temp' => true, 'cat' => 'Iced Coffee'],
-        'Salted Caramel'        => ['price' => 65, 'venti' => 85, 'has_sizes' => true, 'has_temp' => true, 'cat' => 'Iced Coffee'],
-        'White Chocolate'       => ['price' => 65, 'venti' => 85, 'has_sizes' => true, 'has_temp' => true, 'cat' => 'Iced Coffee'],
-        'Hazelnut'              => ['price' => 65, 'venti' => 85, 'has_sizes' => true, 'has_temp' => true, 'cat' => 'Iced Coffee'],
-        'Latte'                 => ['price' => 50, 'venti' => 60, 'has_sizes' => true, 'has_temp' => true, 'cat' => 'Iced Coffee'],
-        'Americano'             => ['price' => 55, 'venti' => 65, 'has_sizes' => true, 'has_temp' => true, 'cat' => 'Iced Coffee'],
+        'Caramel Macchiato'     => ['price' => 65,  'venti' => 85,   'has_sizes' => true,  'has_temp' => true,  'cat' => 'Iced Coffee'],
+        'Spanish Latte'         => ['price' => 65,  'venti' => 85,   'has_sizes' => true,  'has_temp' => true,  'cat' => 'Iced Coffee'],
+        'Mocha Latte'           => ['price' => 65,  'venti' => 85,   'has_sizes' => true,  'has_temp' => true,  'cat' => 'Iced Coffee'],
+        'Vanilla Latte'         => ['price' => 65,  'venti' => 85,   'has_sizes' => true,  'has_temp' => true,  'cat' => 'Iced Coffee'],
+        'Salted Caramel'        => ['price' => 65,  'venti' => 85,   'has_sizes' => true,  'has_temp' => true,  'cat' => 'Iced Coffee'],
+        'White Chocolate'       => ['price' => 65,  'venti' => 85,   'has_sizes' => true,  'has_temp' => true,  'cat' => 'Iced Coffee'],
+        'Hazelnut'              => ['price' => 65,  'venti' => 85,   'has_sizes' => true,  'has_temp' => true,  'cat' => 'Iced Coffee'],
+        'Latte'                 => ['price' => 50,  'venti' => 60,   'has_sizes' => true,  'has_temp' => true,  'cat' => 'Iced Coffee'],
+        'Americano'             => ['price' => 55,  'venti' => 65,   'has_sizes' => true,  'has_temp' => true,  'cat' => 'Iced Coffee'],
 
-        // Matcha
-        'Choco Matcha'          => ['price' => 70, 'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Matcha'],
-        'Matcha Latte'          => ['price' => 55, 'venti' => null, 'has_sizes' => false, 'has_temp' => true,  'cat' => 'Matcha'],
-        'Matcha Espresso'       => ['price' => 80, 'venti' => null, 'has_sizes' => false, 'has_temp' => true,  'cat' => 'Matcha'],
-        'Strawberry Matcha'     => ['price' => 70, 'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Matcha'],
+        'Choco Matcha'          => ['price' => 70,  'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Matcha'],
+        'Matcha Latte'          => ['price' => 55,  'venti' => null, 'has_sizes' => false, 'has_temp' => true,  'cat' => 'Matcha'],
+        'Matcha Espresso'       => ['price' => 80,  'venti' => null, 'has_sizes' => false, 'has_temp' => true,  'cat' => 'Matcha'],
+        'Strawberry Matcha'     => ['price' => 70,  'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Matcha'],
 
-        // Strawberry / Blueberry
-        'Strawberry'            => ['price' => 65, 'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Strawberry'],
-        'Blueberry'             => ['price' => 65, 'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Blueberry'],
+        'Strawberry'            => ['price' => 65,  'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Strawberry'],
+        'Blueberry'             => ['price' => 65,  'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Blueberry'],
 
-        // Pistachio
-        'Pistachio Creme'       => ['price' => 60, 'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Pistachio'],
-        'Pistachio Jolt'        => ['price' => 90, 'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Pistachio'],
-        'Choco Stachio'         => ['price' => 75, 'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Pistachio'],
+        'Pistachio Creme'       => ['price' => 60,  'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Pistachio'],
+        'Pistachio Jolt'        => ['price' => 90,  'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Pistachio'],
+        'Choco Stachio'         => ['price' => 75,  'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Pistachio'],
 
-        // Choco — ₱50 Grande / ₱65 Venti
-        'Choco'                 => ['price' => 50, 'venti' => 65, 'has_sizes' => true,  'has_temp' => false, 'cat' => 'Choco'],
-
-        // Flavored Soda — ₱50 Grande
-        'Lychee Soda'           => ['price' => 50, 'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Flavored Soda'],
-        'Passion Fruit Soda'    => ['price' => 50, 'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Flavored Soda'],
-        'Strawberry Soda'       => ['price' => 50, 'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Flavored Soda'],
-        'Green Apple Soda'      => ['price' => 50, 'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Flavored Soda'],
-        'Blueberry Soda'        => ['price' => 50, 'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Flavored Soda'],
+        'Lychee Soda'           => ['price' => 50,  'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Flavored Soda'],
+        'Passion Fruit Soda'    => ['price' => 50,  'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Flavored Soda'],
+        'Strawberry Soda'       => ['price' => 50,  'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Flavored Soda'],
+        'Green Apple Soda'      => ['price' => 50,  'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Flavored Soda'],
+        'Blueberry Soda'        => ['price' => 50,  'venti' => null, 'has_sizes' => false, 'has_temp' => false, 'cat' => 'Flavored Soda'],
     ];
 
-    /** How often each drink type shows up in the generated demo orders. */
-    private const WEIGHT = [
-        'Iced Coffee' => 8, 'Matcha' => 4, 'Frappe' => 4, 'Special Sundaes' => 3, 'Cones' => 3,
-        'Flavored Soda' => 3, 'Premium Sundaes' => 2, 'Choco' => 2, 'Strawberry' => 2,
-        'Blueberry' => 2, 'Pistachio' => 2,
+    /** What ONE serving uses: drink => [ingredient key => amount]. Add the rest from the admin Menu page. */
+    private const RECIPES = [
+        'Caramel Macchiato' => ['beans' => 18, 'milk' => 180, 'caramel' => 30,   'cup16' => 1, 'lid' => 1],
+        'Spanish Latte'     => ['beans' => 18, 'milk' => 200, 'condensed' => 25, 'cup16' => 1, 'lid' => 1],
+        'Mocha Latte'       => ['beans' => 18, 'milk' => 180, 'choco' => 30,     'cup16' => 1, 'lid' => 1],
+        'Vanilla Latte'     => ['beans' => 18, 'milk' => 190, 'vanilla' => 25,   'cup16' => 1, 'lid' => 1],
+        'White Chocolate'   => ['beans' => 14, 'milk' => 200, 'choco' => 35,     'cup16' => 1, 'lid' => 1],
+        'Hazelnut'          => ['beans' => 18, 'milk' => 180, 'hazelnut' => 25,  'cup16' => 1, 'lid' => 1],
+        'Matcha Latte'      => ['matcha' => 12, 'milk' => 210, 'cup16' => 1, 'lid' => 1],
+        'Strawberry Frappe' => ['milk' => 120, 'ice' => 250, 'cream' => 20,      'cup16' => 1, 'lid' => 1],
     ];
 
-    /**
-     * Which drink types each add-on is offered on (the board's "hot/iced coffee
-     * add-ons" and "soda add-ons"). An add-on missing from this list would show
-     * on every drink.
-     */
-    private const ADDON_TYPES = [
-        'Extra Shot'    => ['Iced Coffee', 'Hot Coffee', 'Iced Coffee Float'],
-        'Syrup'         => ['Iced Coffee', 'Hot Coffee', 'Iced Coffee Float'],
-        'Ice Cream'     => ['Iced Coffee', 'Hot Coffee', 'Iced Coffee Float'],
+    /** name => price, straight off the menu board's add-on boxes. */
+    private const ADDONS = [
+        'Extra Shot'    => 30,
+        'Syrup'         => 10,
+        'Ice Cream'     => 20,
+        'Popping Boba'  => 15,
+        'Rainbow Jelly' => 15,
+    ];
+
+    /** What one add-on uses. Popping Boba and Rainbow Jelly have no ingredient yet. */
+    private const ADDON_RECIPES = [
+        'Extra Shot' => ['beans' => 9],
+        'Syrup'      => ['vanilla' => 15],
+        'Ice Cream'  => ['cream' => 45],
+    ];
+
+    /** Which categories may offer each add-on: coffee add-ons vs soda add-ons on the board. */
+    private const ADDON_CATEGORIES = [
+        'Extra Shot'    => ['Iced Coffee'],
+        'Syrup'         => ['Iced Coffee'],
+        'Ice Cream'     => ['Iced Coffee'],
         'Popping Boba'  => ['Flavored Soda'],
         'Rainbow Jelly' => ['Flavored Soda'],
     ];
 
-    /**
-     * These real menu items happen to share a name with one of DemoData's
-     * original 8 placeholder recipes, so that invented ingredient breakdown
-     * is reused here (at the real price above, not the old placeholder one).
-     * Everything else on the real menu has no recipe yet — add it from the
-     * admin Menu page once you know the real measurements.
-     */
-    private const REUSE_RECIPE = [
-        'Caramel Macchiato', 'Spanish Latte', 'Mocha Latte', 'Vanilla Latte',
-        'White Chocolate', 'Hazelnut', 'Matcha Latte', 'Strawberry Frappe',
-    ];
+    /* ------------------------------- run ------------------------------ */
 
     public function run(): void
     {
         DB::transaction(function () {
             $branchIds     = $this->branches();
-            $staffIds      = $this->users($branchIds);
+            $staffByBranch = $this->users($branchIds);
             $drinkTypeIds  = $this->drinkTypes();
             $ingredientIds = $this->ingredients();
             $menuIds       = $this->menu($drinkTypeIds, $ingredientIds);
-            $addonPrices   = $this->addons($ingredientIds, $drinkTypeIds);
-            $this->orders($branchIds, $staffIds, $menuIds, $addonPrices);
+            $addons        = $this->addons($ingredientIds, $drinkTypeIds);
+            $this->orders($branchIds, $staffByBranch, $menuIds, $addons);
         });
     }
 
@@ -152,46 +160,45 @@ class DatabaseSeeder extends Seeder
 
     private function branches(): array
     {
-        foreach (DemoData::branches() as $name) {
+        foreach (self::BRANCHES as $name) {
             Branch::firstOrCreate(['name' => $name]);
         }
 
         return Branch::pluck('id', 'name')->all();   // ['Poblacion Main' => 1, ...]
     }
 
-    /** Returns ['Staff User' => userId, 'Jhen R.' => userId, ...]: every staff login, used as demo cashiers. */
+    /** Returns ['Poblacion Main' => [userId, userId], ...]. */
     private function users(array $branchIds): array
     {
-        $first = $branchIds[DemoData::branches()[0]];
-
         User::updateOrCreate(['contact' => 'admin'], [
             'name' => 'Admin User', 'username' => 'Admin',
             'password' => Hash::make('1234'), 'role' => 'admin', 'branch_id' => null,
         ]);
 
-        $ids = [];
-        $ids['Staff User'] = User::updateOrCreate(['contact' => 'staff'], [
+        User::updateOrCreate(['contact' => 'staff'], [
             'name' => 'Staff User', 'username' => 'Staff',
-            'password' => Hash::make('1234'), 'role' => 'staff', 'branch_id' => $first,
-        ])->id;
+            'password' => Hash::make('1234'), 'role' => 'staff', 'branch_id' => $branchIds[self::BRANCHES[0]],
+        ]);
 
-        // One login per name used on DemoData::orders(). contact = first name, password 1234.
-        foreach (collect(DemoData::orders())->pluck('staff')->unique() as $name) {
-            $handle = strtolower(strtok($name, ' '));
-            $ids[$name] = User::updateOrCreate(['contact' => $handle], [
-                'name' => $name, 'username' => ucfirst($handle),
-                'password' => Hash::make('1234'), 'role' => 'staff', 'branch_id' => $first,
-            ])->id;
+        $byBranch = [];
+        foreach (self::STAFF_BY_BRANCH as $branch => $names) {
+            foreach ($names as $name) {
+                $handle = strtolower(strtok($name, ' '));
+
+                $byBranch[$branch][] = User::updateOrCreate(['contact' => $handle], [
+                    'name' => $name, 'username' => ucfirst($handle),
+                    'password' => Hash::make('1234'), 'role' => 'staff', 'branch_id' => $branchIds[$branch],
+                ])->id;
+            }
         }
 
-        return $ids;
+        return $byBranch;
     }
 
-    /** DemoData's category list, plus "Pearl Shakes" and "Cones" which the real board has but DemoData didn't. */
     private function drinkTypes(): array
     {
         $ids = [];
-        foreach ([...DemoData::drinkTypes(), 'Pearl Shakes', 'Cones'] as $name) {
+        foreach (self::DRINK_TYPES as $name) {
             $ids[$name] = $this->put('drink_types', ['name' => $name]);
         }
 
@@ -201,26 +208,22 @@ class DatabaseSeeder extends Seeder
     private function ingredients(): array
     {
         $ids = [];
-        foreach (DemoData::ingredients() as $row) {
-            $ids[$row['key']] = $this->put('ingredients', ['key' => $row['key']], [
-                'name'          => $row['name'],
-                'unit'          => $row['unit'],
-                'stock'         => $row['stock'],
-                'reorder_level' => $row['reorder'],
-                'cost'          => $row['cost'],
-                // 'used_today' is not stored; it is summed from stock_movements.
+        foreach (self::INGREDIENTS as $key => [$name, $unit, $stock, $reorder, $cost]) {
+            $ids[$key] = $this->put('ingredients', ['key' => $key], [
+                'name'          => $name,
+                'unit'          => $unit,
+                'stock'         => $stock,
+                'reorder_level' => $reorder,
+                'cost'          => $cost,
             ]);
         }
 
         return $ids;
     }
 
-    /** The real menu board. Recipes only exist for the 8 items listed in REUSE_RECIPE. */
     private function menu(array $drinkTypeIds, array $ingredientIds): array
     {
-        $oldRecipes = DemoData::recipes();
         $ids = [];
-
         foreach (self::MENU as $name => $item) {
             $ids[$name] = $id = $this->put('menu_items', ['name' => $name], [
                 'price'           => $item['price'],
@@ -231,147 +234,149 @@ class DatabaseSeeder extends Seeder
                 'is_active'       => true,
             ]);
 
-            if (in_array($name, self::REUSE_RECIPE, true)) {
-                $this->recipe('menu_item_ingredient', 'menu_item_id', $id, $oldRecipes[$name], $ingredientIds);
+            if (isset(self::RECIPES[$name])) {
+                $this->recipe('menu_item_ingredient', 'menu_item_id', $id, self::RECIPES[$name], $ingredientIds);
             }
         }
 
         return $ids;
     }
 
-    /** Returns ['Extra Shot' => ['id' => .., 'price' => ..], ...] so orders can snapshot add-on prices. */
+    /** Returns ['Extra Shot' => ['id' => 1, 'price' => 30], ...] so orders can snapshot add-on prices. */
     private function addons(array $ingredientIds, array $drinkTypeIds): array
     {
-        $recipes = DemoData::addonRecipes();
-        $prices  = [];
-        $now     = now();
+        $out = [];
+        foreach (self::ADDONS as $name => $price) {
+            $id = $this->put('addons', ['name' => $name], ['price' => $price]);
+            $out[$name] = ['id' => $id, 'price' => $price];
 
-        foreach (DemoData::customizations() as $row) {
-            $id = $this->put('addons', ['name' => $row['name']], ['price' => $row['price']]);
-            $prices[$row['name']] = ['id' => $id, 'price' => $row['price']];
+            $this->recipe('addon_ingredient', 'addon_id', $id, self::ADDON_RECIPES[$name] ?? [], $ingredientIds);
 
-            $this->recipe('addon_ingredient', 'addon_id', $id, $recipes[$row['name']] ?? [], $ingredientIds);
-
-            // Which drink types this add-on may go on.
             DB::table('addon_drink_type')->where('addon_id', $id)->delete();
-            foreach (self::ADDON_TYPES[$row['name']] ?? [] as $type) {
-                DB::table('addon_drink_type')->insert([
-                    'addon_id'      => $id,
-                    'drink_type_id' => $drinkTypeIds[$type],
-                    'created_at'    => $now,
-                    'updated_at'    => $now,
-                ]);
+            $now = now();
+            foreach (self::ADDON_CATEGORIES[$name] ?? [] as $category) {
+                if (isset($drinkTypeIds[$category])) {
+                    DB::table('addon_drink_type')->insert([
+                        'addon_id'      => $id,
+                        'drink_type_id' => $drinkTypeIds[$category],
+                        'created_at'    => $now,
+                        'updated_at'    => $now,
+                    ]);
+                }
             }
         }
 
-        return $prices;
+        return $out;
     }
 
     /**
-     * Demo order history for the last 7 days, dated relative to today so the
-     * dashboards always have something to show. Repeatable (fixed random seed).
-     * Skipped when orders already exist, so live orders from the till are never
-     * mixed with it. These do not deduct stock.
+     * A week of orders ending today, across every branch, following each
+     * drink's size / hot-cold / add-on rules. The seed value is fixed, so a
+     * reseed gives the same history. These do not deduct stock; live orders
+     * from the staff screen do.
      */
-    private function orders(array $branchIds, array $staffIds, array $menuIds, array $addons): void
+    private function orders(array $branchIds, array $staffByBranch, array $menuIds, array $addons): void
     {
         if (DB::table('orders')->exists()) {
             return;
         }
 
         mt_srand(2026);
+        $pick = fn (array $list) => $list[mt_rand(0, count($list) - 1)];
 
-        $cashiers = array_values($staffIds);
-        $names    = array_keys(self::MENU);
-        $weights  = array_map(fn ($n) => self::WEIGHT[self::MENU[$n]['cat']] ?? 2, $names);
-        $busiest  = DemoData::branches()[0];
+        $itemNames = array_keys(self::MENU);
 
-        $today = new \DateTimeImmutable('today');
-        $now   = new \DateTimeImmutable();
+        $addonsByCategory = [];
+        foreach (self::ADDON_CATEGORIES as $addon => $categories) {
+            foreach ($categories as $category) {
+                $addonsByCategory[$category][] = $addon;
+            }
+        }
 
-        // 1) Work out when each order happened (never in the future), per branch and day.
-        $slots = [];
-        foreach ($branchIds as $branchName => $branchId) {
-            for ($back = 6; $back >= 0; $back--) {
-                $day = $today->modify("-{$back} days");
-                $n   = $branchName === $busiest ? mt_rand(8, 14) : mt_rand(3, 7);
+        // Plan every order first so the numbers can run in time order.
+        $plans = [];
+        foreach ($branchIds as $branch => $branchId) {
+            $staff = $staffByBranch[$branch] ?? [];
+            if (! $staff) {
+                continue;
+            }
 
-                for ($k = 0; $k < $n; $k++) {
-                    $at = $day->setTime(mt_rand(7, 19), mt_rand(0, 59), mt_rand(0, 59));
-                    if ($at <= $now) {
-                        $slots[] = ['at' => $at, 'branch' => $branchId];
+            for ($ago = 6; $ago >= 0; $ago--) {
+                $perDay = mt_rand(4, 8);
+
+                for ($n = 0; $n < $perDay; $n++) {
+                    $lastHour = $ago === 0 ? max(8, min(19, now()->hour)) : 19;
+                    $at = now()->subDays($ago)->setTime(mt_rand(7, $lastHour), mt_rand(0, 59));
+                    if ($at->isFuture()) {
+                        $at = now()->subMinutes(mt_rand(5, 60));
                     }
+
+                    $lines = [];
+                    foreach (range(1, mt_rand(1, 3)) as $unused) {
+                        $name = $pick($itemNames);
+                        $item = self::MENU[$name];
+
+                        $size = $item['has_sizes'] ? (mt_rand(0, 1) ? 'venti' : 'grande') : null;
+                        $valid = $addonsByCategory[$item['cat']] ?? [];
+
+                        $lines[] = [
+                            'name'  => $name,
+                            'qty'   => mt_rand(1, 2),
+                            'size'  => $size,
+                            'price' => ($size === 'venti' && $item['venti']) ? $item['venti'] : $item['price'],
+                            'temp'  => $item['has_temp'] ? (mt_rand(0, 4) === 0 ? 'hot' : 'cold') : null,
+                            'addon' => ($valid && mt_rand(0, 2) === 0) ? $pick($valid) : null,
+                        ];
+                    }
+
+                    $plans[] = [
+                        'at'      => $at,
+                        'branch'  => $branchId,
+                        'user'    => $pick($staff),
+                        'payment' => mt_rand(0, 1) ? 'gcash' : 'cash',
+                        'status'  => mt_rand(1, 20) === 1 ? 'refunded' : 'completed',
+                        'lines'   => $lines,
+                    ];
                 }
             }
         }
-        usort($slots, fn ($a, $b) => $a['at'] <=> $b['at']);   // oldest first, so order numbers climb with time
 
-        // 2) Write them.
-        foreach ($slots as $i => $slot) {
-            $at = $slot['at']->format('Y-m-d H:i:s');
+        usort($plans, fn ($a, $b) => $a['at'] <=> $b['at']);
 
+        foreach ($plans as $i => $plan) {
             $orderId = DB::table('orders')->insertGetId([
                 'order_no'       => str_pad((string) ($i + 1), 4, '0', STR_PAD_LEFT),
-                'user_id'        => $cashiers[mt_rand(0, count($cashiers) - 1)],
-                'branch_id'      => $slot['branch'],
-                'payment_method' => mt_rand(1, 100) <= 55 ? 'cash' : 'gcash',
-                'status'         => mt_rand(1, 100) <= 4 ? 'refunded' : 'completed',
-                'created_at'     => $at,
-                'updated_at'     => $at,
+                'user_id'        => $plan['user'],
+                'branch_id'      => $plan['branch'],
+                'payment_method' => $plan['payment'],
+                'status'         => $plan['status'],
+                'created_at'     => $plan['at'],
+                'updated_at'     => $plan['at'],
             ]);
 
-            $lines = mt_rand(1, 100) <= 60 ? 1 : (mt_rand(1, 100) <= 70 ? 2 : 3);
-
-            for ($l = 0; $l < $lines; $l++) {
-                $name = $this->pick($names, $weights);
-                $meta = self::MENU[$name];
-
-                $sizes = $meta['cat'] === 'Cones' ? ['small', 'giant'] : ['grande', 'venti'];   // same sets as StaffController
-                $size  = $meta['has_sizes'] ? (mt_rand(1, 100) <= 30 ? $sizes[1] : $sizes[0]) : null;
-                $price = ($size === $sizes[1] && $meta['venti'] !== null) ? $meta['venti'] : $meta['price'];
-                $temp  = $meta['has_temp'] ? (mt_rand(1, 100) <= 25 ? 'hot' : 'cold') : null;
-
+            foreach ($plan['lines'] as $line) {
                 $itemId = DB::table('order_items')->insertGetId([
                     'order_id'     => $orderId,
-                    'menu_item_id' => $menuIds[$name],
-                    'quantity'     => mt_rand(1, 100) <= 75 ? 1 : mt_rand(2, 3),
-                    'unit_price'   => $price,
-                    'size'         => $size,
-                    'temperature'  => $temp,
-                    'created_at'   => $at,
-                    'updated_at'   => $at,
+                    'menu_item_id' => $menuIds[$line['name']],
+                    'quantity'     => $line['qty'],
+                    'unit_price'   => $line['price'],
+                    'size'         => $line['size'],
+                    'temperature'  => $line['temp'],
+                    'created_at'   => $plan['at'],
+                    'updated_at'   => $plan['at'],
                 ]);
 
-                // Sometimes an add-on, but only one the till would offer on this drink type.
-                $options = array_keys(array_filter(self::ADDON_TYPES, fn ($types) => in_array($meta['cat'], $types, true)));
-                if ($options && mt_rand(1, 100) <= 25) {
-                    $addonName = $options[mt_rand(0, count($options) - 1)];
-
+                if ($line['addon']) {
                     DB::table('order_item_addon')->insert([
                         'order_item_id' => $itemId,
-                        'addon_id'      => $addons[$addonName]['id'],
-                        'unit_price'    => $addons[$addonName]['price'],
-                        'created_at'    => $at,
-                        'updated_at'    => $at,
+                        'addon_id'      => $addons[$line['addon']]['id'],
+                        'unit_price'    => $addons[$line['addon']]['price'],
+                        'created_at'    => $plan['at'],
+                        'updated_at'    => $plan['at'],
                     ]);
                 }
             }
         }
-    }
-
-    /** Weighted random choice from $names. */
-    private function pick(array $names, array $weights): string
-    {
-        $r = mt_rand(1, array_sum($weights));
-
-        foreach ($names as $i => $name) {
-            $r -= $weights[$i];
-            if ($r <= 0) {
-                return $name;
-            }
-        }
-
-        return end($names);
     }
 
     /* ---------------------------- helpers ---------------------------- */

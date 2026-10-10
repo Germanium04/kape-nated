@@ -14,8 +14,8 @@
     <div class="stat-row">
         <x-admin.stat label="Sales today"   value="₱{{ number_format($salesToday, 2) }}" trend="+14% vs yesterday" tone="up" />
         <x-admin.stat label="Orders today"  value="{{ $ordersToday }}" trend="3 in the last hour" />
-        <x-admin.stat label="Average ticket" value="₱{{ number_format($avgTicket, 2) }}" trend="+₱22 vs last week" tone="up" />
-        <x-admin.stat label="Items to reorder" value="{{ count($lowStock) }}" trend="Check the stock room" tone="alert" />
+        <x-admin.stat label="Gross Income" value="₱{{ number_format($avgTicket, 2) }}" trend="+₱22 vs last week" tone="up" />
+        <x-admin.stat label="Items to reorder" value="{{ count($lowStock) }}" trend="Check the stock room" tone="alert" onclick/>
     </div>
 
     @if($lowStock)
@@ -78,10 +78,10 @@
         </x-admin.panel>
     </div>
 
-    <x-admin.panel title="Latest orders" note="Pulled from the staff terminal">
-        <table class="table">
+    <x-admin.panel title="Today's orders" note="Pulled live from staff terminals">
+        <table class="table" id="dashboardOrdersTable">
             <thead>
-                <tr><th>Order</th><th>Time</th><th>Cashier</th><th>Items</th><th>Payment</th><th class="ta-r">Total</th><th></th></tr>
+                <tr><th>Order</th><th>Time</th><th>Cashier</th><th>Branch</th><th>Quantity</th><th>Payment</th><th class="ta-r">Total</th><th>Action</th></tr>
             </thead>
             <tbody>
                 @foreach(array_slice($orders, 0, 5) as $order)
@@ -89,14 +89,35 @@
                         <td class="mono">#{{ $order['no'] }}</td>
                         <td>{{ \Illuminate\Support\Str::after($order['date'], ' ') }}</td>
                         <td>{{ $order['staff'] }}</td>
+                        <td>{{ $order['branch'] }}</td>
                         <td>{{ array_sum(array_column($order['items'], 'qty')) }}</td>
                         <td>{{ $order['payment'] }}</td>
                         <td class="ta-r mono">₱{{ number_format($order['total'], 2) }}</td>
-                        <td class="ta-r"><a class="link" href="{{ route('admin.receipts') }}">Receipt</a></td>
+                        <td class="ta-r"><button type="button" class="btn btn--ghost btn--sm" data-open-modal="receipt-{{ $order['no'] }}">View</button></td>
                     </tr>
                 @endforeach
             </tbody>
         </table>
+
+        <div id="dashboardPagination" class="pagination-bar" hidden>
+            <span id="dashboardPageInfo" class="muted" style="font-size: 13px;"></span>
+            <div class="pagination-controls" style="display: flex; gap: 6px; align-items: center;">
+                <button type="button" id="dashPrevBtn" class="btn btn--ghost btn--sm">&laquo; Prev</button>
+                <div id="dashPageNumbers" style="display: flex; gap: 4px;"></div>
+                <button type="button" id="dashNextBtn" class="btn btn--ghost btn--sm">Next &raquo;</button>
+            </div>
+        </div>
+
+        @foreach($orders as $order)
+            <x-admin.modal id="receipt-{{ $order['no'] }}" title="Order #{{ $order['no'] }}" size="sm">
+                <x-admin.receipt :order="$order" />
+
+                <x-slot:footer>
+                    <button type="button" class="btn btn--ghost" data-close-modal="receipt-{{ $order['no'] }}">Close</button>
+                    <button type="button" class="btn btn--primary" onclick="window.print()">Print receipt</button>
+                </x-slot:footer>
+            </x-admin.modal>
+        @endforeach
     </x-admin.panel>
 
 </x-admin.shell>

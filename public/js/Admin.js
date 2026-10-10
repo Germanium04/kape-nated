@@ -66,9 +66,6 @@ document.addEventListener('keydown', (e) => {
     document.body.classList.remove('is-locked');
 });
 
-/* ---------- receipts: branch, payment, range, search, and cash audit ---------- */
-/* ---------- receipts: branch, payment, range, search, cash audit & numbered pagination ---------- */
-/* ---------- receipts: branch, payment, range, search, cash audit & numbered pagination ---------- */
 (function receipts() {
     const table = document.getElementById('receiptTable');
     if (!table) return;
@@ -608,6 +605,85 @@ function initInventory() {
     fillStockInPicker();
     render();
 }
+
+// pagination
+(function dashboardOrdersPagination() {
+    const table = document.getElementById('dashboardOrdersTable');
+    if (!table) return;
+
+    const paginationBar = document.getElementById('dashboardPagination');
+    const pageInfo = document.getElementById('dashboardPageInfo');
+    const pageNumbers = document.getElementById('dashPageNumbers');
+    const prevBtn = document.getElementById('dashPrevBtn');
+    const nextBtn = document.getElementById('dashNextBtn');
+
+    const rows = Array.from(table.tBodies[0].rows);
+    const pageSize = 5; // Rows allowed per page
+    let currentPage = 1;
+    const totalRows = rows.length;
+    const totalPages = Math.ceil(totalRows / pageSize);
+
+    // If rows don't exceed the limit, hide pagination entirely
+    if (totalRows <= pageSize) {
+        if (paginationBar) paginationBar.hidden = true;
+        return;
+    }
+
+    function render() {
+        // 1. Toggle row visibility
+        const start = (currentPage - 1) * pageSize;
+        const end = start + pageSize;
+
+        rows.forEach((row, index) => {
+            row.hidden = !(index >= start && index < end);
+        });
+
+        // 2. Update info text
+        if (pageInfo) {
+            pageInfo.textContent = `Showing ${start + 1}–${Math.min(end, totalRows)} of ${totalRows} orders`;
+        }
+
+        // 3. Render page buttons
+        if (pageNumbers) {
+            pageNumbers.innerHTML = '';
+            for (let i = 1; i <= totalPages; i++) {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.textContent = i;
+                btn.className = i === currentPage ? 'btn btn--primary btn--sm' : 'btn btn--ghost btn--sm';
+                btn.style.padding = '3px 8px';
+                btn.addEventListener('click', () => {
+                    currentPage = i;
+                    render();
+                });
+                pageNumbers.appendChild(btn);
+            }
+        }
+
+        // 4. Update Prev/Next button states
+        if (prevBtn) prevBtn.disabled = currentPage === 1;
+        if (nextBtn) nextBtn.disabled = currentPage === totalPages;
+
+        // Show pagination bar
+        if (paginationBar) paginationBar.hidden = false;
+    }
+
+    prevBtn?.addEventListener('click', () => {
+        if (currentPage > 1) {
+            currentPage--;
+            render();
+        }
+    });
+
+    nextBtn?.addEventListener('click', () => {
+        if (currentPage < totalPages) {
+            currentPage++;
+            render();
+        }
+    });
+
+    render();
+})();
 
 /* ---------- menu: add, edit, and remove drinks and their recipes ---------- */
 function initMenu() {
