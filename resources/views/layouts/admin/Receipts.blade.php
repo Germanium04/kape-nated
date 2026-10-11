@@ -135,4 +135,5 @@
         </x-admin.modal>
     @endforeach
 
+@extends('layouts.admin.Shell')
 </x-admin.shell>

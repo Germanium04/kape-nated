@@ -127,4 +127,5 @@
         @endforeach
     </x-admin.panel>
 
+@extends('layouts.admin.Shell')
 </x-admin.shell>

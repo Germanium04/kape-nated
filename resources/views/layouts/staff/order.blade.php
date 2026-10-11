@@ -194,4 +194,5 @@
     </script>
 @endpush
 
+@extends('layouts.staff.Shell')
 </x-staff.shell>
