@@ -173,29 +173,56 @@ function initInventory() {
             </option>
         `).join('');
 
-        const defaultUnit = selectedKey 
-            ? (masterList.find(i => i.key === selectedKey)?.unit || 'g')
-            : (masterList[0]?.unit || 'g');
-
         row.innerHTML = `
             <select class="field stock-in-item-select" style="flex: 2; height: 38px; box-sizing: border-box; margin: 0;">
                 <option value="" ${!selectedKey ? 'selected' : ''} disabled>Select ingredient</option>
                 ${optionsHtml}
             </select>
             
-            <div style="flex: 1; display: flex; align-items: center; gap: 6px; height: 38px;">
-                <input type="number" step="any" inputmode="decimal" class="field stock-in-qty-input" value="${qty}" placeholder="Qty" style="width: 100%; height: 38px; box-sizing: border-box; margin: 0;">
-                <span class="muted stock-in-unit-badge" style="font-size: 12px; min-width: 28px;">${defaultUnit}</span>
-            </div>
+            <input type="number" step="any" inputmode="decimal" class="field stock-in-qty-input" value="${qty}" placeholder="Qty" style="flex: 1; min-width: 96px; height: 38px; box-sizing: border-box; margin: 0;">
+
+            <select class="field stock-in-unit-select" style="width: 80px; min-width: 80px; flex: none; height: 38px; box-sizing: border-box; margin: 0; padding-left: 6px; padding-right: 6px; text-align: center; text-align-last: center; cursor: pointer;">
+                <option value="" disabled>Unit</option>
+            </select>
 
             <button type="button" class="btn btn--ghost remove-stock-in-row" style="height: 38px; width: 38px; padding: 0; display: flex; align-items: center; justify-content: center; color: var(--red, #c0392b);">✕</button>
         `;
 
-        row.querySelector('.stock-in-item-select').addEventListener('change', (e) => {
-            const selectedOpt = e.target.options[e.target.selectedIndex];
-            const unit = selectedOpt.getAttribute('data-unit') || '';
-            row.querySelector('.stock-in-unit-badge').textContent = unit;
-        });
+        const itemSelect = row.querySelector('.stock-in-item-select');
+        const unitSelect = row.querySelector('.stock-in-unit-select');
+
+        // Rebuild the unit dropdown whenever the ingredient changes, so the options
+        // always match the ingredient's universal base unit (solid vs liquid).
+        function syncUnitOptions() {
+            const baseUnit = itemSelect.options[itemSelect.selectedIndex]?.getAttribute('data-unit') || '';
+
+            let unitOptions = [];
+            if (baseUnit === 'g') {
+                // Solid / weight ingredients (e.g. Espresso beans, Matcha powder)
+                unitOptions = [
+                    { label: 'g',  mult: 1 },
+                    { label: 'kg', mult: 1000 },
+                ];
+            } else if (baseUnit === 'ml') {
+                // Liquid / volume ingredients (e.g. Vanilla syrup, Fresh milk)
+                unitOptions = [
+                    { label: 'ml', mult: 1 },
+                    { label: 'L',  mult: 1000 },
+                ];
+            } else if (baseUnit === 'pc') {
+                // Count / piece ingredients (e.g. Cups, Dome lids)
+                unitOptions = [
+                    { label: 'pc', mult: 1 },
+                ];
+            }
+
+            unitSelect.innerHTML = unitOptions.length
+                ? unitOptions.map(u => `<option value="${u.label}" data-multiplier="${u.mult}">${u.label}</option>`).join('')
+                : '<option value="" disabled>—</option>';
+        }
+
+        itemSelect.addEventListener('change', syncUnitOptions);
+        syncUnitOptions();
 
         row.querySelector('.remove-stock-in-row').addEventListener('click', () => row.remove());
         container.appendChild(row);
@@ -279,9 +306,26 @@ function initInventory() {
             payload.branch = document.getElementById('stockInBranch')?.value;
             document.querySelectorAll('#stockInRowsContainer .stock-in-row').forEach(row => {
                 const key = row.querySelector('.stock-in-item-select')?.value;
-                const qty = parseFloat(row.querySelector('.stock-in-qty-input')?.value) || 0;
-                if (key && qty > 0) {
-                    payload.items.push({ key, qty });
+                const enteredQty = parseFloat(row.querySelector('.stock-in-qty-input')?.value) || 0;
+
+                // Read the chosen display unit and its multiplier (g=1, kg=1000, ml=1, L=1000).
+                const unitSelect = row.querySelector('.stock-in-unit-select');
+                const unitOpt = unitSelect?.options[unitSelect.selectedIndex];
+                const enteredUnit = unitOpt?.value || '';
+                const multiplier = parseFloat(unitOpt?.getAttribute('data-multiplier')) || 1;
+
+                if (key && enteredQty > 0) {
+                    // Convert the entered amount into the ingredient's universal base unit
+                    // before it leaves the frontend (e.g. 1 kg -> 1000 g).
+                    const qty = enteredQty * multiplier;
+
+                    payload.items.push({
+                        key,
+                        qty,
+                        entered_qty: enteredQty,
+                        entered_unit: enteredUnit,
+                    });
+
                     const item = items.find(i => i.key === key && i.branch_name === payload.branch);
                     if (item) item.stock += qty;
                 }
