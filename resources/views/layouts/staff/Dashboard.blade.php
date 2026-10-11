@@ -205,6 +205,9 @@
                 <div><dt>Branch</dt><dd>{{ $branch }}</dd></div>
                 <div><dt>Cashier</dt><dd>{{ $o->cashier }}</dd></div>
                 <div><dt>Payment</dt><dd>{{ $pay($o->payment_method) }}</dd></div>
+                @if(strtolower($o->payment_method ?? '') === 'gcash')
+                    <div><dt>GCash Ref</dt><dd>{{ $o->gcash_ref ?? '—' }}</dd></div>
+                @endif
                 <div><dt>Status</dt><dd>{{ ucfirst($o->status) }}</dd></div>
             </dl>
 

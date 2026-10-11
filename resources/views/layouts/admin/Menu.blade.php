@@ -4,10 +4,10 @@
     <x-admin.panel title="" note="">
         <div class="tab-nav-row">
             <button type="button" class="tab-btn tab-btn--active" id="tabMenuDrinks">
-                ☕ Drink Menu
+                Drink Menu
             </button>
             <button type="button" class="tab-btn tab-btn--inactive" id="tabMenuIngredients">
-                📦 Master Ingredient Directory
+                Master Ingredient Directory
             </button>
         </div>
 
@@ -15,7 +15,7 @@
         <div id="filterRowDrinks" class="filter-grid-row">
             <label class="field-group fg-search">
                 <span>Search Drink</span>
-                <input type="search" class="field" id="menuSearch" placeholder="🔍 Type a drink name...">
+                <input type="search" class="field" id="menuSearch" placeholder="Type a drink name...">
             </label>
 
             <label class="field-group fg-branch">
@@ -42,7 +42,7 @@
         <div id="filterRowIngredients" class="filter-grid-row" hidden>
             <label class="field-group fg-search">
                 <span>Search Raw Ingredients</span>
-                <input type="search" class="field" id="ingDirectorySearch" placeholder="🔍 Search by ingredient name or key...">
+                <input type="search" class="field" id="ingDirectorySearch" placeholder="Search by ingredient name or key...">
             </label>
 
             <label class="field-group fg-status-sm">

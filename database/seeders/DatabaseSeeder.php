@@ -14,14 +14,14 @@ class DatabaseSeeder extends Seeder
 {
     use WithoutModelEvents;
 
-    private const BRANCHES = ['Poblacion Main', 'Mabini Branch', 'Uptown Terminal', 'Riverside Stall', 'Airport Kiosk'];
+    private const BRANCHES = ['UM Matina Branch', 'Tibungco Branch', 'Ubalde Branch', 'Carmen Branch', 'Tagum Branch'];
 
     private const STAFF_BY_BRANCH = [
-        'Poblacion Main'  => ['Jhen R.', 'Marco D.'],
-        'Mabini Branch'   => ['Kate L.', 'Noel S.'],
-        'Uptown Terminal' => ['Ria P.', 'Aldrin V.'],
-        'Riverside Stall' => ['Trisha M.', 'Benjie C.'],
-        'Airport Kiosk'   => ['Lia F.', 'Oscar T.'],
+        'UM Matina Branch'  => ['Jhen R.', 'Marco D.'],
+        'Tibungco Branch'   => ['Kate L.', 'Noel S.'],
+        'Ubalde Branch' => ['Ria P.', 'Aldrin V.'],
+        'Carmen Branch' => ['Trisha M.', 'Benjie C.'],
+        'Tagum Branch'   => ['Lia F.', 'Oscar T.'],
     ];
 
     private const DRINK_TYPES = [
@@ -405,6 +405,7 @@ class DatabaseSeeder extends Seeder
                 'user_id'        => $plan['user'],
                 'branch_id'      => $branchId,
                 'payment_method' => $plan['payment'],
+                'gcash_ref'      => $plan['payment'] === 'gcash' ? (string) rand(1000000000000, 9999999999999) : null,
                 'status'         => $plan['status'],
                 'created_at'     => $plan['at'],
                 'updated_at'     => $plan['at'],

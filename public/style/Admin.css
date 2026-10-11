@@ -1387,8 +1387,8 @@ a { color: inherit; }
     .page-head-row,
     .tab-nav-row,
     .header-actions-wrapper,
-    #exportScopeSelect,
-    #btnExportReport {
+    #btnExportReport,
+    #exportReportModal {
         display: none !important;
     }
 
@@ -1501,6 +1501,22 @@ a { color: inherit; }
 
     .receipt {
         border: 0 !important;
+    }
+
+    /* Receipt-only printing: when a receipt modal is open, hide the page
+       content but keep the modal so Print receipt outputs just the receipt.
+       (The modals are direct children of .page, so spare them from the wipe.) */
+    body:has(.modal:not([hidden]):has(.receipt)) .topbar {
+        display: none !important;
+    }
+
+    body:has(.modal:not([hidden]):has(.receipt)) .page > :not(.modal) {
+        display: none !important;
+    }
+
+    body:has(.modal:not([hidden]):has(.receipt)) .page {
+        padding: 0 !important;
+        max-width: 100% !important;
     }
 }
 

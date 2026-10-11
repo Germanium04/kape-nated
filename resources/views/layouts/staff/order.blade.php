@@ -29,7 +29,7 @@
             </div>
             <div class="order-field-search">
                 <label for="search" class="order-label-text">Search menu</label>
-                <input id="search" class="field order-input-stretch" type="search" autocomplete="off" placeholder="🔍 Search drink name...">
+                <input id="search" class="field order-input-stretch" type="search" autocomplete="off" placeholder="Search drink name...">
             </div>
         </div>
         <div class="grid" id="grid"></div>
@@ -136,13 +136,17 @@
             <div id="receiptPrintArea" class="receipt-paper">
                 <div class="receipt-paper-head">
                     <h3>Kape-nated</h3>
-                    <p class="receipt-branch">{{ $branch ?? 'Main Branch' }}</p>
+                    <p class="receipt-branch">{{ $branch ?? 'UM Matina Branch' }}</p>
                     <p id="rcptDate" class="receipt-date"></p>
                 </div>
 
                 <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px dashed var(--line-soft);">
                     <span>Order No. <b>#<span id="rcptOrderNo"></span></b></span>
                     <span>Payment: <b id="rcptPayMethod"></b></span>
+                </div>
+                <div id="rcptGcashRow" style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px dashed var(--line-soft);" hidden>
+                    <span>GCash Ref No.</span>
+                    <b id="rcptGcashRef" style="font-family: monospace;"></b>
                 </div>
 
                 <div id="rcptItems" class="receipt-paper-body"></div>
@@ -162,7 +166,7 @@
 
         <div style="display: flex; gap: 8px; margin-top: 14px;">
             <button type="button" class="btn btn--ghost" data-close-modal="receiptModal" style="flex: 1; margin: 0;">Done</button>
-            <button type="button" class="btn btn--primary" id="btnPrintReceipt" style="flex: 1; margin: 0;">🖨️ Print Receipt</button>
+            <button type="button" class="btn btn--primary" id="btnPrintReceipt" style="flex: 1; margin: 0;">Print Receipt</button>
         </div>
     </div>
 </div>

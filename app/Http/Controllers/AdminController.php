@@ -99,6 +99,98 @@ class AdminController extends Controller
         ));
     }
     
+    /* =========================================================================
+     | REPORT EXPORTS (CSV + server-side PDF)
+     | ========================================================================= */
+
+    public function exportCsv(Request $request)
+    {
+        $filters = $this->validateExportFilters($request);
+        $data = $this->buildReportExportData($filters);
+
+        $filename = 'kape-report-' . $filters['scope'] . '-' . now()->format('Ymd-His') . '.csv';
+
+        return response()->stream(function () use ($data, $filters) {
+            $out = fopen('php://output', 'w');
+
+            fputcsv($out, ['Kape-nated Report', ucfirst($filters['scope']), $data['range_label'], $data['branch_label']]);
+            fputcsv($out, ['Exported', now()->format('d M Y, h:i A'), 'By', auth()->user()->name ?? 'Admin']);
+            fputcsv($out, []);
+
+            if (in_array($filters['scope'], ['sales', 'both'], true)) {
+                $this->writeSalesCsv($out, $data);
+            }
+
+            if ($filters['scope'] === 'both') {
+                fputcsv($out, []);
+            }
+
+            if (in_array($filters['scope'], ['inventory', 'both'], true)) {
+                $this->writeInventoryCsv($out, $data);
+            }
+
+            fclose($out);
+        }, 200, [
+            'Content-Type'        => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ]);
+    }
+
+    public function exportPdf(Request $request)
+    {
+        $filters = $this->validateExportFilters($request);
+        $data = $this->buildReportExportData($filters);
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('layouts.admin.ReportPdf', [
+            'data'    => $data,
+            'filters' => $filters,
+        ])->setPaper('a4', 'portrait');
+
+        return $pdf->download('kape-report-' . $filters['scope'] . '-' . now()->format('Ymd-His') . '.pdf');
+    }
+
+    private function validateExportFilters(Request $request): array
+    {
+        $validated = $request->validate([
+            'scope'   => 'nullable|in:sales,inventory,both',
+            'branch'  => 'nullable|string',
+            'view_by' => 'nullable|in:day,month,year',
+            'date'    => 'nullable|date',
+        ]);
+
+        $branch = $validated['branch'] ?? 'all';
+        if ($branch !== 'all' && ! Branch::where('name', $branch)->exists()) {
+            $branch = 'all';
+        }
+
+        return [
+            'scope'   => $validated['scope'] ?? 'both',
+            'branch'  => $branch,
+            'view_by' => $validated['view_by'] ?? 'day',
+            'date'    => $validated['date'] ?? Carbon::today()->format('Y-m-d'),
+        ];
+    }
+
+    private function exportRangeMatches(string $dateTime, array $filters): bool
+    {
+        $day = Str::before($dateTime, ' ');
+        if ($filters['view_by'] === 'day') {
+            return $day === $filters['date'];
+        }
+        if ($filters['view_by'] === 'month') {
+            return substr($day, 0, 7) === substr($filters['date'], 0, 7);
+        }
+        return substr($day, 0, 4) === substr($filters['date'], 0, 4);
+    }
+
+    private function exportMatchesBranch(?string $branchName, array $filters): bool
+    {
+        if ($filters['branch'] === 'all') {
+            return true;
+        }
+        return strtolower($branchName ?? '') === strtolower($filters['branch']);
+    }
+
     private function getInventoryMetrics(): array
     {
         $today = Carbon::today();
@@ -126,6 +218,127 @@ class AdminController extends Controller
             'waste_cost'          => (float) $wasteCost,
             'closing_stock_value' => (float) $closingValue,
         ];
+    }
+
+    private function buildReportExportData(array $filters): array
+    {
+        $filteredOrders = collect($this->getFormattedOrders())
+            ->filter(fn ($o) => ($o['status'] ?? '') === 'Completed'
+                && $this->exportRangeMatches($o['date'] ?? '', $filters)
+                && $this->exportMatchesBranch($o['branch'] ?? null, $filters))
+            ->values()
+            ->all();
+
+        $gross = collect($filteredOrders)->sum(fn ($o) => $o['total'] ?? 0);
+        $cash = collect($filteredOrders)->filter(fn ($o) => strtolower($o['payment'] ?? '') === 'cash')->sum(fn ($o) => $o['total'] ?? 0);
+        $gcash = collect($filteredOrders)->filter(fn ($o) => strtolower($o['payment'] ?? '') === 'gcash')->sum(fn ($o) => $o['total'] ?? 0);
+        $cups = collect($filteredOrders)->sum(fn ($o) => collect($o['items'] ?? [])->sum('qty'));
+        $count = count($filteredOrders);
+
+        $itemMap = [];
+        $branchMap = [];
+        foreach ($filteredOrders as $o) {
+            $branchMap[$o['branch']] = ($branchMap[$o['branch']] ?? 0) + ($o['total'] ?? 0);
+            foreach ($o['items'] ?? [] as $item) {
+                $name = $item['name'] ?? 'Unknown';
+                if (! isset($itemMap[$name])) {
+                    $itemMap[$name] = ['name' => $name, 'sold' => 0, 'revenue' => 0];
+                }
+                $itemMap[$name]['sold'] += $item['qty'] ?? 0;
+                $itemMap[$name]['revenue'] += ($item['qty'] ?? 0) * ($item['price'] ?? 0);
+            }
+        }
+        arsort($branchMap);
+        usort($itemMap, fn ($a, $b) => $b['revenue'] <=> $a['revenue']);
+
+        $filteredIngredients = collect($this->getFormattedIngredientsWithBranches())
+            ->filter(fn ($i) => $this->exportMatchesBranch($i['branch_name'] ?? null, $filters))
+            ->values()
+            ->all();
+
+        $filteredMovements = collect($this->getFormattedStockMovements())
+            ->filter(fn ($m) => $this->exportRangeMatches(($m['date'] ?? '') . ' 00:00', $filters)
+                && $this->exportMatchesBranch($m['branch'] ?? null, $filters))
+            ->values()
+            ->all();
+
+        $rangeDate = Carbon::parse($filters['date']);
+        $rangeLabel = $filters['view_by'] === 'day'
+            ? $rangeDate->format('d M Y') . ' (DAY)'
+            : ($filters['view_by'] === 'month'
+                ? $rangeDate->format('M Y') . ' (MONTH)'
+                : $rangeDate->format('Y') . ' (YEAR)');
+
+        return [
+            'range_label'  => $rangeLabel,
+            'branch_label' => $filters['branch'] === 'all' ? 'All Branches' : $filters['branch'],
+            'generated_by' => auth()->user()->name ?? 'Admin User',
+            'exported_at'  => now()->format('d M Y, h:i A'),
+            'summary'      => [
+                'gross'      => $gross,
+                'orders'     => $count,
+                'avg_ticket' => $count ? $gross / $count : 0,
+                'cups'       => $cups,
+                'cash'       => $cash,
+                'gcash'      => $gcash,
+            ],
+            'by_branch'   => $branchMap,
+            'items'       => array_values($itemMap),
+            'orders'      => $filteredOrders,
+            'ingredients' => $filteredIngredients,
+            'movements'   => $filteredMovements,
+            'metrics'     => $this->getInventoryMetrics(),
+        ];
+    }
+
+    private function writeSalesCsv($out, array $data): void
+    {
+        $s = $data['summary'];
+
+        fputcsv($out, ['=== SALES ===']);
+        fputcsv($out, ['Gross sales', number_format($s['gross'], 2, '.', '')]);
+        fputcsv($out, ['Orders', $s['orders']]);
+        fputcsv($out, ['Average ticket', number_format($s['avg_ticket'], 2, '.', '')]);
+        fputcsv($out, ['Cups served', $s['cups']]);
+        fputcsv($out, ['Cash', number_format($s['cash'], 2, '.', '')]);
+        fputcsv($out, ['GCash', number_format($s['gcash'], 2, '.', '')]);
+        fputcsv($out, []);
+
+        fputcsv($out, ['Order', 'Date', 'Branch', 'Cashier', 'Items', 'Payment', 'Status', 'Total']);
+        foreach ($data['orders'] as $o) {
+            $names = implode('; ', array_map(fn ($i) => ($i['qty'] ?? 0) . 'x ' . ($i['name'] ?? ''), $o['items'] ?? []));
+            fputcsv($out, [
+                $o['no'] ?? '', $o['date'] ?? '', $o['branch'] ?? '', $o['staff'] ?? '',
+                $names, $o['payment'] ?? '', $o['status'] ?? '',
+                number_format($o['total'] ?? 0, 2, '.', ''),
+            ]);
+        }
+        fputcsv($out, []);
+
+        fputcsv($out, ['Drink', 'Cups sold', 'Revenue', 'Share %']);
+        foreach ($data['items'] as $item) {
+            $share = $s['gross'] ? round(($item['revenue'] / $s['gross']) * 100) : 0;
+            fputcsv($out, [$item['name'], $item['sold'], number_format($item['revenue'], 2, '.', ''), $share]);
+        }
+    }
+
+    private function writeInventoryCsv($out, array $data): void
+    {
+        fputcsv($out, ['=== INVENTORY ===']);
+        fputcsv($out, ['Branch', 'Ingredient', 'Unit', 'On hand', 'Reorder level', 'Used today', 'Status']);
+        foreach ($data['ingredients'] as $i) {
+            $status = ($i['stock'] ?? 0) <= 0 ? 'Out of stock' : ((($i['stock'] ?? 0) <= ($i['reorder'] ?? 0)) ? 'Low' : 'Healthy');
+            fputcsv($out, [
+                $i['branch_name'] ?? '', $i['name'] ?? '', $i['unit'] ?? '',
+                $i['stock'] ?? 0, $i['reorder'] ?? 0, $i['used_today'] ?? 0, $status,
+            ]);
+        }
+        fputcsv($out, []);
+
+        fputcsv($out, ['Date', 'Ingredient', 'Branch', 'Reason', 'Change']);
+        foreach ($data['movements'] as $m) {
+            fputcsv($out, [$m['date'] ?? '', $m['ingredient'] ?? '', $m['branch'] ?? '', $m['reason'] ?? '', $m['change'] ?? 0]);
+        }
     }
 
     /* =========================================================================
@@ -520,6 +733,7 @@ class AdminController extends Controller
                     'staff'   => $order->staff->name ?? 'Unknown',
                     'branch'  => $order->branch->name ?? 'Unassigned',
                     'payment' => ucfirst($order->payment_method),
+                    'gcash_ref' => $order->gcash_ref,
                     'status'  => ucfirst($order->status),
                     'total'   => (float) $total,
                     'items'   => $order->items->map(function ($item) {
@@ -582,7 +796,7 @@ class AdminController extends Controller
                     } elseif (preg_match('/@ (.+)/i', $reason, $matches)) {$branchName = trim($matches[1]);                     } else {$branchName = DB::table('branch_inventory')
                             ->join('branches', 'branch_inventory.branch_id', '=', 'branches.id')
                             ->where('branch_inventory.ingredient_id', $m->ingredient_id)
-                            ->value('branches.name') ?? 'Poblacion Main';
+                            ->value('branches.name') ?? 'UM Matina Branch';
                     }
                 }
 

@@ -49,6 +49,10 @@ Route::prefix('admin')
         Route::post('/ingredients/store', 'storeIngredient')->name('ingredients.store');
         Route::patch('/ingredients/{ingredient}/toggle', 'toggleIngredient')->name('ingredients.toggle');
         Route::post('/inventory/operation', 'processStockOperation')->name('inventory.operation');
+
+        // Report exports (CSV download + server-side PDF)
+        Route::get('/reports/export/csv', 'exportCsv')->name('reports.export.csv');
+        Route::get('/reports/export/pdf', 'exportPdf')->name('reports.export.pdf');
     });
 
 // ============================================================
@@ -65,6 +69,8 @@ Route::prefix('staff')
 
         Route::get('/orders', 'orders')->name('orders');
         Route::post('/orders', 'storeOrder')->name('orders.store');
+
+        Route::get('/history', 'history')->name('history');
 
         Route::get('/inventory', 'inventory')->name('inventory');
         Route::post('/inventory/{ingredient}/restock', 'restock')->name('inventory.restock');

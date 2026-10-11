@@ -31,6 +31,7 @@
 
     <nav class="topnav">
         <a href="{{ route('staff.orders') }}"    class="{{ request()->routeIs('staff.orders')    ? 'is-current' : '' }}">Order</a>
+        <a href="{{ route('staff.history') }}"   class="{{ request()->routeIs('staff.history')   ? 'is-current' : '' }}">Transaction History</a>
         <a href="{{ route('staff.inventory') }}" class="{{ request()->routeIs('staff.inventory') ? 'is-current' : '' }}">Inventory</a>
     </nav>
 

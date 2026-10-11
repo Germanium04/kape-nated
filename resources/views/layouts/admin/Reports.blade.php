@@ -24,14 +24,6 @@
         </div>
 
         <div style="display: flex; align-items: center; gap: 8px;">
-            <label style="margin: 0;">
-                <select class="field field--sm" id="exportScopeSelect" style="height: 38px; padding: 6px 10px;">
-                    <option value="both">Both (Sales & Inventory)</option>
-                    <option value="sales">Sales Report Only</option>
-                    <option value="inventory">Inventory Report Only</option>
-                </select>
-            </label>
-
             <button type="button" class="btn btn--primary btn--sm" id="btnExportReport" style="height: 38px; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                 Export Report
@@ -39,14 +31,46 @@
         </div>
     </div>
 
+    <x-admin.modal id="exportReportModal" title="Export Report" size="sm">
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+            <div>
+                <p style="font-weight: 600; margin: 0 0 8px;">Report content</p>
+                <label style="display: flex; gap: 8px; align-items: center; padding: 4px 0;">
+                    <input type="radio" name="exportScope" value="both" checked> Both (single file, separate sections)
+                </label>
+                <label style="display: flex; gap: 8px; align-items: center; padding: 4px 0;">
+                    <input type="radio" name="exportScope" value="sales"> Sales report only
+                </label>
+                <label style="display: flex; gap: 8px; align-items: center; padding: 4px 0;">
+                    <input type="radio" name="exportScope" value="inventory"> Inventory report only
+                </label>
+            </div>
+            <div>
+                <p style="font-weight: 600; margin: 0 0 8px;">Format</p>
+                <label style="display: flex; gap: 8px; align-items: center; padding: 4px 0;">
+                    <input type="radio" name="exportFormat" value="csv" checked> CSV (spreadsheet)
+                </label>
+                <label style="display: flex; gap: 8px; align-items: center; padding: 4px 0;">
+                    <input type="radio" name="exportFormat" value="pdf"> PDF (document)
+                </label>
+            </div>
+            <p class="muted text-sm" style="margin: 0;">Exports the branch and date range currently selected on screen.</p>
+        </div>
+
+        <x-slot:footer>
+            <button type="button" class="btn btn--ghost" data-close-modal="exportReportModal">Cancel</button>
+            <button type="button" class="btn btn--primary" id="btnConfirmExport">Download</button>
+        </x-slot:footer>
+    </x-admin.modal>
+
     <!-- Filter Panel -->
     <x-admin.panel title="" note="">
         <div class="tab-nav-row">
             <button type="button" class="tab-btn tab-btn--active" id="btnReportSales">
-                📊 Sales Report
+                Sales Report
             </button>
             <button type="button" class="tab-btn tab-btn--inactive" id="btnReportInventory">
-                📦 Inventory Report
+                Inventory Report
             </button>
         </div>
 
@@ -70,9 +94,29 @@
                 </select>
             </label>
 
-            <label class="field-group fg-branch">
+            <label class="field-group fg-branch" id="reportDayWrap">
                 <span>Date</span>
                 <input type="date" class="field" id="reportDate" value="{{ \Illuminate\Support\Carbon::today()->format('Y-m-d') }}">
+            </label>
+
+            <label class="field-group fg-branch" id="reportMonthWrap" hidden>
+                <span>Month</span>
+                <select class="field" id="reportMonth">
+                    @for($m = 0; $m < 12; $m++)
+                        @php $d = \Illuminate\Support\Carbon::today()->startOfMonth()->subMonths($m); @endphp
+                        <option value="{{ $d->format('Y-m') }}">{{ $d->format('F Y') }}</option>
+                    @endfor
+                </select>
+            </label>
+
+            <label class="field-group fg-branch" id="reportYearWrap" hidden>
+                <span>Year</span>
+                <select class="field" id="reportYear">
+                    @for($y = 0; $y < 5; $y++)
+                        @php $yr = \Illuminate\Support\Carbon::today()->subYears($y)->format('Y'); @endphp
+                        <option value="{{ $yr }}">{{ $yr }}</option>
+                    @endfor
+                </select>
             </label>
 
             <label class="field-group fg-branch" id="invSubTabGroup" hidden>

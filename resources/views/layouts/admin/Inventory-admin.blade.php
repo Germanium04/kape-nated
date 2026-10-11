@@ -29,7 +29,7 @@
         <div class="filter-grid-row" style="grid-template-columns: 2fr 1fr 1fr;">
             <label class="field-group fg-search">
                 <span>Search Ledger</span>
-                <input type="search" class="field" id="stockSearch" placeholder="🔍 Search Transaction ID, item, or branch...">
+                <input type="search" class="field" id="stockSearch" placeholder="Search Transaction ID, item, or branch...">
             </label>
 
             <label class="field-group fg-branch">
@@ -47,7 +47,7 @@
                 <span id="dynamicFilterLabel">Transaction Type</span>
                 <select class="field" id="stockStatusFilter">
                     <option value="all">All Action Types</option>
-                    <option value="stock_in">📦 Stock Deliveries (Stock-In)</option>
+                    <option value="stock_in">Stock Deliveries (Stock-In)</option>
                     <option value="transfer">↔ Branch Transfers</option>
                 </select>
             </label>
@@ -59,7 +59,7 @@
     <!-- Stock Operations Panel -->
     <x-admin.panel id="ledgerPanel" title="Stock Operations Ledger" note="Real-time log of manual supply deliveries and inter-branch transfers">
         <x-slot:tools>
-            <button type="button" class="btn btn--primary btn--sm" data-open-modal="inventoryActionModal">📦 New Stock Operation</button>
+            <button type="button" class="btn btn--primary btn--sm" data-open-modal="inventoryActionModal">New Stock Operation</button>
         </x-slot:tools>
 
         <table class="table" id="stockTable">
@@ -85,8 +85,8 @@
         <label class="field-group form-row-spacing">
             <span class="text-ink-bold">Select Action Type</span>
             <select class="field action-type-select" id="invActionType">
-                <option value="stock_in">📦 Stock Delivery (Stock-In)</option>
-                <option value="transfer">↔ Branch Stock Transfer</option>
+                <option value="stock_in">Stock Delivery (Stock-In)</option>
+                <option value="transfer">Branch Stock Transfer</option>
             </select>
         </label>
 

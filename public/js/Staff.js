@@ -684,6 +684,11 @@ function initStaffOrder() {
                 // --- POPULATE UNIFIED RECEIPT MODAL ---
                 if ($('rcptOrderNo'))$('rcptOrderNo').textContent = result.order_no;
                 if ($('rcptPayMethod'))$('rcptPayMethod').textContent = paymentMethod.toUpperCase();
+                if ($('rcptGcashRow')) {
+                    const isGcash = paymentMethod === 'gcash';
+                    $('rcptGcashRow').hidden = !isGcash;
+                    if (isGcash && $('rcptGcashRef')) $('rcptGcashRef').textContent = result.gcash_ref || gcashRef || '—';
+                }
                 if ($('rcptDate'))$('rcptDate').textContent = new Date().toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' });
                 if ($('rcptMeta'))$('rcptMeta').textContent = `Transaction Completed Successfully`;
                 if ($('rcptTotal'))$('rcptTotal').textContent = peso(result.total);

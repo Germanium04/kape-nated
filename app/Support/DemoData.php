@@ -111,10 +111,10 @@ class DemoData
         ];
     }
 
-    /** The five stalls this admin account oversees. */
+    /** The five branches this admin account oversees. */
     public static function branches(): array
     {
-        return ['Poblacion Main', 'Mabini Branch', 'Uptown Terminal', 'Riverside Stall', 'Airport Kiosk'];
+        return ['UM Matina Branch', 'Tibungco Branch', 'Ubalde Branch', 'Carmen Branch', 'Tagum Branch'];
     }
 
     /** Completed transactions the admin can pull a receipt from. */
@@ -122,40 +122,40 @@ class DemoData
     {
         return [
             [
-                'no' => '0148', 'date' => '2026-09-19 14:12', 'staff' => 'Jhen R.', 'branch' => 'Poblacion Main', 'payment' => 'GCash', 'status' => 'Completed',
+                'no' => '0148', 'date' => '2026-09-19 14:12', 'staff' => 'Jhen R.', 'branch' => 'UM Matina Branch', 'payment' => 'GCash', 'gcash_ref' => '1327645912043', 'status' => 'Completed',
                 'items' => [
                     ['name' => 'Caramel Macchiato', 'qty' => 2, 'price' => 150, 'temp' => 'Cold', 'addons' => ['Extra Shot']],
                     ['name' => 'Mocha Latte', 'qty' => 1, 'price' => 145, 'temp' => 'Hot', 'addons' => []],
                 ],
             ],
             [
-                'no' => '0147', 'date' => '2026-09-19 13:48', 'staff' => 'Marco D.', 'branch' => 'Mabini Branch', 'payment' => 'Cash', 'status' => 'Completed',
+                'no' => '0147', 'date' => '2026-09-19 13:48', 'staff' => 'Marco D.', 'branch' => 'Tibungco Branch', 'payment' => 'Cash', 'status' => 'Completed',
                 'items' => [
                     ['name' => 'Spanish Latte', 'qty' => 1, 'price' => 140, 'temp' => 'Cold', 'addons' => ['Syrup']],
                     ['name' => 'Strawberry Frappe', 'qty' => 2, 'price' => 165, 'temp' => 'Cold', 'addons' => ['Ice Cream']],
                 ],
             ],
             [
-                'no' => '0146', 'date' => '2026-09-19 12:30', 'staff' => 'Jhen R.', 'branch' => 'Uptown Terminal', 'payment' => 'Cash', 'status' => 'Completed',
+                'no' => '0146', 'date' => '2026-09-19 12:30', 'staff' => 'Jhen R.', 'branch' => 'Ubalde Branch', 'payment' => 'Cash', 'status' => 'Completed',
                 'items' => [
                     ['name' => 'Matcha Latte', 'qty' => 3, 'price' => 160, 'temp' => 'Cold', 'addons' => []],
                 ],
             ],
             [
-                'no' => '0145', 'date' => '2026-09-19 11:05', 'staff' => 'Kate L.', 'branch' => 'Riverside Stall', 'payment' => 'GCash', 'status' => 'Refunded',
+                'no' => '0145', 'date' => '2026-09-19 11:05', 'staff' => 'Kate L.', 'branch' => 'Carmen Branch', 'payment' => 'GCash', 'gcash_ref' => '1327645887710', 'status' => 'Refunded',
                 'items' => [
                     ['name' => 'White Chocolate', 'qty' => 1, 'price' => 150, 'temp' => 'Hot', 'addons' => []],
                 ],
             ],
             [
-                'no' => '0144', 'date' => '2026-09-19 10:22', 'staff' => 'Marco D.', 'branch' => 'Airport Kiosk', 'payment' => 'Cash', 'status' => 'Completed',
+                'no' => '0144', 'date' => '2026-09-19 10:22', 'staff' => 'Marco D.', 'branch' => 'Tagum Branch', 'payment' => 'Cash', 'status' => 'Completed',
                 'items' => [
                     ['name' => 'Vanilla Latte', 'qty' => 2, 'price' => 145, 'temp' => 'Hot', 'addons' => []],
                     ['name' => 'Hazelnut', 'qty' => 1, 'price' => 145, 'temp' => 'Cold', 'addons' => ['Extra Shot']],
                 ],
             ],
             [
-                'no' => '0143', 'date' => '2026-09-18 17:40', 'staff' => 'Jhen R.', 'branch' => 'Poblacion Main', 'payment' => 'GCash', 'status' => 'Completed',
+                'no' => '0143', 'date' => '2026-09-18 17:40', 'staff' => 'Jhen R.', 'branch' => 'UM Matina Branch', 'payment' => 'GCash', 'gcash_ref' => '1327645819336', 'status' => 'Completed',
                 'items' => [
                     ['name' => 'Caramel Macchiato', 'qty' => 1, 'price' => 150, 'temp' => 'Cold', 'addons' => []],
                     ['name' => 'Mocha Latte', 'qty' => 2, 'price' => 145, 'temp' => 'Cold', 'addons' => ['Syrup']],
@@ -198,11 +198,11 @@ class DemoData
     public static function branchWeights(): array
     {
         return [
-            'Poblacion Main'  => 0.32,
-            'Mabini Branch'   => 0.22,
-            'Uptown Terminal' => 0.18,
-            'Riverside Stall' => 0.16,
-            'Airport Kiosk'   => 0.12,
+            'UM Matina Branch' => 0.32,
+            'Tibungco Branch'  => 0.22,
+            'Ubalde Branch'    => 0.18,
+            'Carmen Branch'    => 0.16,
+            'Tagum Branch'     => 0.12,
         ];
     }
 

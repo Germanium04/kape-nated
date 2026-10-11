@@ -33,7 +33,7 @@
                 <div class="inventory-filter-controls">
                     <div class="inventory-filter-col-search">
                         <label for="stockSearch" class="inventory-filter-label">Search inventory</label>
-                        <input type="search" class="field inventory-filter-input" id="stockSearch" placeholder="🔍 Search by item name">
+                        <input type="search" class="field inventory-filter-input" id="stockSearch" placeholder="Search by item name">
                     </div>
 
                     <div class="inventory-filter-col-item">

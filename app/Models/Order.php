@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Order extends Model
 {
-    protected $fillable = ['order_no', 'user_id', 'branch_id', 'payment_method', 'status'];
+    protected $fillable = ['order_no', 'user_id', 'branch_id', 'payment_method', 'gcash_ref', 'status'];
 
     public function items()  { return $this->hasMany(OrderItem::class); }
     public function branch() { return $this->belongsTo(Branch::class); }

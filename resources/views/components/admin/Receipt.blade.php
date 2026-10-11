@@ -20,6 +20,9 @@
         <div><dt>Branch</dt><dd>{{ $order['branch'] }}</dd></div>
         <div><dt>Cashier</dt><dd>{{ $order['staff'] }}</dd></div>
         <div><dt>Payment</dt><dd>{{ $order['payment'] }}</dd></div>
+        @if(strtolower($order['payment'] ?? '') === 'gcash')
+            <div><dt>GCash Ref</dt><dd>{{ $order['gcash_ref'] ?? '—' }}</dd></div>
+        @endif
     </dl>
 
     <table class="receipt-lines">

@@ -233,11 +233,31 @@ function initReports() {
 
     // Export & Filter Controls
     const btnExportReport = document.getElementById('btnExportReport');
-    const exportScopeSelect = document.getElementById('exportScopeSelect');
+    const btnConfirmExport = document.getElementById('btnConfirmExport');
+    const exportModal = document.getElementById('exportReportModal');
     const reportBranch = document.getElementById('reportBranch');
     const reportViewBy = document.getElementById('reportViewBy');
     const reportDate = document.getElementById('reportDate');
+    const reportMonth = document.getElementById('reportMonth');
+    const reportYear = document.getElementById('reportYear');
+    const reportDayWrap = document.getElementById('reportDayWrap');
+    const reportMonthWrap = document.getElementById('reportMonthWrap');
+    const reportYearWrap = document.getElementById('reportYearWrap');
     const selectInvCategory = document.getElementById('selectInvCategory');
+
+    function toggleReportDateInputs() {
+        const mode = reportViewBy?.value || 'day';
+        if (reportDayWrap) reportDayWrap.hidden = mode !== 'day';
+        if (reportMonthWrap) reportMonthWrap.hidden = mode !== 'month';
+        if (reportYearWrap) reportYearWrap.hidden = mode !== 'year';
+    }
+
+    function getReportDateValue() {
+        const mode = reportViewBy?.value || 'day';
+        if (mode === 'month') return reportMonth?.value || '';
+        if (mode === 'year') return reportYear?.value || '';
+        return reportDate?.value || '';
+    }
 
     btnSales?.addEventListener('click', () => {
         btnSales.className = 'tab-btn tab-btn--active';
@@ -257,33 +277,35 @@ function initReports() {
     });
 
     btnExportReport?.addEventListener('click', () => {
-        const scope = exportScopeSelect?.value || 'both';
-
-        if (scope === 'sales') {
-            if (secSales) secSales.removeAttribute('hidden');
-            if (secInv) secInv.setAttribute('hidden', 'true');
-        } else if (scope === 'inventory') {
-            if (secSales) secSales.setAttribute('hidden', 'true');
-            if (secInv) secInv.removeAttribute('hidden');
-        } else {
-            if (secSales) secSales.removeAttribute('hidden');
-            if (secInv) secInv.removeAttribute('hidden');
+        if (exportModal) {
+            exportModal.hidden = false;
+            document.body.classList.add('is-locked');
         }
+    });
 
-        window.print();
+    btnConfirmExport?.addEventListener('click', () => {
+        const scope = document.querySelector('input[name="exportScope"]:checked')?.value || 'both';
+        const format = document.querySelector('input[name="exportFormat"]:checked')?.value || 'csv';
+        const branch = reportBranch?.value || 'all';
+        const viewBy = reportViewBy?.value || 'day';
+        // Normalize to a full date the backend's `date` validation accepts.
+        let date = getReportDateValue() || '';
+        if (viewBy === 'month' && date) date = date + '-01';
+        if (viewBy === 'year' && date) date = date + '-01-01';
 
-        if (btnSales?.classList.contains('tab-btn--active')) {
-            if (secSales) secSales.removeAttribute('hidden');
-            if (secInv) secInv.setAttribute('hidden', 'true');
-        } else {
-            if (secSales) secSales.setAttribute('hidden', 'true');
-            if (secInv) secInv.removeAttribute('hidden');
+        const params = new URLSearchParams({ scope, branch, view_by: viewBy, date });
+        const base = format === 'pdf' ? '/admin/reports/export/pdf' : '/admin/reports/export/csv';
+        window.location.href = `${base}?${params.toString()}`;
+
+        if (exportModal) {
+            exportModal.hidden = true;
+            document.body.classList.remove('is-locked');
         }
     });
 
     function isDateInSelectedRange(recordDateStr) {
         if (!recordDateStr) return false;
-        const selectedDateVal = reportDate?.value;
+        const selectedDateVal = getReportDateValue();
         if (!selectedDateVal) return true;
 
         const viewBy = reportViewBy?.value || 'day';
@@ -314,14 +336,21 @@ function initReports() {
     }
 
     function updatePrintRangeText() {
-        const dateInput = reportDate?.value;
         const viewBy = reportViewBy?.value || 'day';
+        const dateInput = getReportDateValue();
         const branch = reportBranch?.value || 'all';
         const printTextEl = document.getElementById('printReportRangeText');
 
         if (!printTextEl) return;
-        let dateFormatted = dateInput ? new Date(dateInput).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Selected Period';
-        let branchFormatted = branch === 'all' ? 'All Branches' : branch;
+        let dateFormatted = 'Selected Period';
+        if (viewBy === 'month' && dateInput) {
+            dateFormatted = new Date(dateInput + '-01').toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+        } else if (viewBy === 'year' && dateInput) {
+            dateFormatted = dateInput;
+        } else if (dateInput) {
+            dateFormatted = new Date(dateInput).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+        }
+        const branchFormatted = branch === 'all' ? 'All Branches' : branch;
 
         printTextEl.textContent = `${dateFormatted} (${viewBy.toUpperCase()}) · ${branchFormatted}`;
     }
@@ -370,7 +399,7 @@ function initReports() {
         if (elCups) elCups.textContent = totalCups;
 
         const branchOrders = getBranchFilteredOrders().filter(o => o.status === 'Completed');
-        const baseDate = reportDate?.value ? new Date(reportDate.value) : new Date();
+        const baseDate = getReportDateValue() ? new Date(getReportDateValue() + (reportViewBy?.value === 'month' ? '-01' : (reportViewBy?.value === 'year' ? '-01-01' : ''))) : new Date();
         const dailyTakingsMap = {};
 
         const last7Days = [];
@@ -827,17 +856,19 @@ function initReports() {
         }
     }
 
-    [reportBranch, reportViewBy, reportDate, selectInvCategory].forEach(el => {
+    [reportBranch, reportViewBy, reportDate, reportMonth, reportYear, selectInvCategory].forEach(el => {
         el?.addEventListener('change', () => {
             attentionPage = 1;
             movementsPage = 1;
             reconcilePage = 1;
+            toggleReportDateInputs();
             renderSalesReport();
             renderInventoryReport();
             updatePrintRangeText();
         });
     });
 
+    toggleReportDateInputs();
     renderSalesReport();
     renderInventoryReport();
     updatePrintRangeText();

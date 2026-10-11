@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Ingredient;
+use App\Models\Order;
 use App\Models\StockMovement;
+use App\Support\DemoData;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -137,6 +139,7 @@ class StaffController extends Controller
     {
         $data = $request->validate([
             'payment'          => 'required|in:cash,gcash',
+            'gcash_ref'        => 'nullable|string|max:30|required_if:payment,gcash',
             'items'            => 'required|array|min:1',
             'items.*.id'       => 'required|exists:menu_items,id',
             'items.*.qty'      => 'required|integer|min:1|max:50',
@@ -247,6 +250,7 @@ class StaffController extends Controller
                         'user_id'        => $user->id,
                         'branch_id'      => $user->branch_id,
                         'payment_method' => $data['payment'],
+                        'gcash_ref'      => $data['payment'] === 'gcash' ? ($data['gcash_ref'] ?? null) : null,
                         'status'         => 'completed',
                         'created_at'     => $now,
                         'updated_at'     => $now,
@@ -291,7 +295,7 @@ class StaffController extends Controller
                         ]);
                     }
 
-                    return ['order_no' => $orderNo, 'total' => (float) $total];
+                    return ['order_no' => $orderNo, 'total' => (float) $total, 'gcash_ref' => $data['payment'] === 'gcash' ? ($data['gcash_ref'] ?? null) : null];
                 });
 
                 return response()->json($result + ['next_no' => $this->nextOrderNo()]);
@@ -310,6 +314,79 @@ class StaffController extends Controller
                 }
             }
         } while ($attempts < $maxAttempts);
+    }
+
+    /* ----------------------------- history ------------------------------ */
+
+    public function history(Request $request)
+    {
+        $user = $request->user();
+        $branchId = $user->branch_id;
+        $branch = $this->branchName($request);
+
+        $orders = [];
+        if ($branchId) {
+            $live = Order::with(['staff', 'items.menuItem', 'items.addons'])
+                ->where('branch_id', $branchId)
+                ->latest()
+                ->limit(300)
+                ->get()
+                ->map(function ($order) use ($branch) {
+                    $total = $order->items->sum(function ($item) {
+                        $itemTotal = $item->unit_price * $item->quantity;
+                        $addonTotal = $item->addons->sum('pivot.unit_price') * $item->quantity;
+                        return $itemTotal + $addonTotal;
+                    });
+
+                    return [
+                        'uid'       => 'live-' . $order->order_no,
+                        'no'        => $order->order_no,
+                        'date'      => $order->created_at->format('Y-m-d H:i'),
+                        'staff'     => $order->staff->name ?? 'Unknown',
+                        'branch'    => $branch,
+                        'payment'   => ucfirst($order->payment_method),
+                        'gcash_ref' => $order->gcash_ref,
+                        'status'    => ucfirst($order->status),
+                        'total'     => (float) $total,
+                        'source'    => 'live',
+                        'items'     => $order->items->map(function ($item) {
+                            return [
+                                'name'   => $item->menuItem->name ?? 'Custom Item',
+                                'qty'    => $item->quantity,
+                                'price'  => (float) $item->unit_price,
+                                'temp'   => ucfirst($item->temperature ?? 'Cold'),
+                                'addons' => $item->addons->pluck('name')->toArray(),
+                            ];
+                        })->toArray(),
+                    ];
+                })->toArray();
+
+            $demo = collect(DemoData::orders())
+                ->filter(fn ($o) => ($o['branch'] ?? '') === $branch)
+                ->map(fn ($o) => [
+                    'uid'       => 'demo-' . $o['no'],
+                    'no'        => $o['no'],
+                    'date'      => $o['date'],
+                    'staff'     => $o['staff'],
+                    'branch'    => $o['branch'],
+                    'payment'   => $o['payment'],
+                    'gcash_ref' => $o['gcash_ref'] ?? null,
+                    'status'    => $o['status'],
+                    'total'     => (float) DemoData::total($o),
+                    'source'    => 'demo',
+                    'items'     => $o['items'],
+                ])->toArray();
+
+            $orders = collect(array_merge($live, $demo))
+                ->sortByDesc('date')
+                ->values()
+                ->all();
+        }
+
+        return view('layouts.staff.History', [
+            'orders' => $orders,
+            'branch' => $branch,
+        ]);
     }
 
     /* ----------------------------- inventory ---------------------------- */

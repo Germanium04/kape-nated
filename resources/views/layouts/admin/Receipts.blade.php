@@ -38,14 +38,21 @@
 
             <label class="field-group" id="rangeMonthWrap" hidden>
                 <span>Month</span>
-                <input type="month" class="field" id="rangeMonth" value="{{ \Illuminate\Support\Carbon::today()->format('Y-m') }}">
+                <select class="field" id="rangeMonth">
+                    @for($m = 0; $m < 12; $m++)
+                        @php $d = \Illuminate\Support\Carbon::today()->startOfMonth()->subMonths($m); @endphp
+                        <option value="{{ $d->format('Y-m') }}">{{ $d->format('F Y') }}</option>
+                    @endfor
+                </select>
             </label>
 
             <label class="field-group" id="rangeYearWrap" hidden>
                 <span>Year</span>
                 <select class="field" id="rangeYear">
-                    <option value="{{ \Illuminate\Support\Carbon::today()->format('Y') }}">{{ \Illuminate\Support\Carbon::today()->format('Y') }}</option>
-                    <option value="{{ \Illuminate\Support\Carbon::today()->subYear()->format('Y') }}">{{ \Illuminate\Support\Carbon::today()->subYear()->format('Y') }}</option>
+                    @for($y = 0; $y < 5; $y++)
+                        @php $yr = \Illuminate\Support\Carbon::today()->subYears($y)->format('Y'); @endphp
+                        <option value="{{ $yr }}">{{ $yr }}</option>
+                    @endfor
                 </select>
             </label>
 
