@@ -12,6 +12,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('ingredient_id')->constrained()->cascadeOnDelete();
             $table->foreignId('order_id')->nullable()->constrained()->nullOnDelete();
+            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
             $table->decimal('change', 10, 2); // negative = usage, positive = restock
             $table->string('reason')->nullable(); // 'order', 'restock', 'waste', 'correction'
             $table->timestamps();

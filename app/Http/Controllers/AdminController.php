@@ -18,17 +18,18 @@ class AdminController extends Controller
 {
     public function dashboard()
     {
-        $orders      =$this->getFormattedOrders();
-        $ingredients =$this->getFormattedIngredients();
-        $sales       =$this->getSalesByDay();
-        $topItems    =$this->getTopItems();
+        $orders      = $this->getFormattedOrders();
+        $ingredients = $this->getFormattedIngredients();
+        $sales       = $this->getSalesByDay();
+        $topItems    = $this->getTopItems();
 
         return view('layouts.admin.Dashboard', compact('orders', 'ingredients', 'sales', 'topItems'));
     }
 
     public function receipts()
     {
-        $orders   = $this->getFormattedOrders();$branches = Branch::pluck('name')->toArray();
+        $orders   = $this->getFormattedOrders();
+        $branches = Branch::pluck('name')->toArray();
 
         return view('layouts.admin.Receipts', compact('orders', 'branches'));
     }
@@ -50,14 +51,19 @@ class AdminController extends Controller
 
     public function menu()
     {
-        $menuItems = MenuItem::with(['ingredients', 'drinkType'])->get()->map(function ($item) {$recipe = [];
-            foreach ($item->ingredients as $ing) {$recipe[$ing->key] = (float)$ing->pivot->quantity;
+        $menuItems = MenuItem::with(['ingredients', 'drinkType'])->get()->map(function ($item) {
+            $recipe = [];
+            foreach ($item->ingredients as $ing) {
+                $recipe[$ing->key] = (float)$ing->pivot->quantity;
             }
 
             return [
                 'id'              => $item->id,
                 'name'            => $item->name,
                 'price'           => (float) $item->price,
+                'price_venti'     => $item->price_venti ? (float) $item->price_venti : null,
+                'has_sizes'       => (bool) $item->has_sizes,
+                'has_temperature' => (bool) $item->has_temperature,
                 'drink_type_id'   => $item->drink_type_id,
                 'drink_type_name' => $item->drinkType->name ?? null,
                 'is_active'       => (bool) $item->is_active,
@@ -66,26 +72,37 @@ class AdminController extends Controller
             ];
         })->toArray();
 
-        $drinkTypes  = DrinkType::select('id', 'name')->get()->toArray();$ingredients = $this->getFormattedIngredients();$addons      = Addon::select('id', 'name', 'price')->get()->toArray();
+        $drinkTypes = DrinkType::with('addons')->get()->map(function ($type) {
+            return [
+                'id'         => $type->id,
+                'name'       => $type->name,
+                'addon_ids'  => $type->addons->pluck('id')->toArray(),
+            ];
+        })->toArray();
+
+        $ingredients = $this->getFormattedIngredients();
+        $addons      = Addon::select('id', 'name', 'price')->get()->toArray();
 
         return view('layouts.admin.Menu', compact('menuItems', 'drinkTypes', 'ingredients', 'addons'));
     }
 
     public function inventory()
     {
-        $ingredients   =$this->getFormattedIngredientsWithBranches();
-        $branchWeights =$this->getBranchWeights();
-        $recipes       =$this->getRecipes();
-        $addonRecipes  =$this->getAddonRecipes();
+        $ingredients   = $this->getFormattedIngredientsWithBranches();
+        $branchWeights = $this->getBranchWeights();
+        $recipes       = $this->getRecipes();
+        $addonRecipes  = $this->getAddonRecipes();
+        $movements     = $this->getFormattedStockMovements();
 
-        return view('layouts.admin.Inventory-admin', compact('ingredients', 'branchWeights', 'recipes', 'addonRecipes'));
+        return view('layouts.admin.Inventory-admin', compact(
+            'ingredients', 'branchWeights', 'recipes', 'addonRecipes', 'movements'
+        ));
     }
     
     private function getInventoryMetrics(): array
     {
         $today = Carbon::today();
 
-        // 1. Stock Received Today
         $stockReceivedCost = DB::table('stock_movements')
             ->join('ingredients', 'stock_movements.ingredient_id', '=', 'ingredients.id')
             ->whereDate('stock_movements.created_at', $today)
@@ -93,7 +110,6 @@ class AdminController extends Controller
             ->where('stock_movements.reason', '!=', 'order')
             ->sum(DB::raw('stock_movements.change * ingredients.cost'));
 
-        // 2. Waste Cost Today
         $wasteCost = DB::table('stock_movements')
             ->join('ingredients', 'stock_movements.ingredient_id', '=', 'ingredients.id')
             ->whereDate('stock_movements.created_at', $today)
@@ -101,7 +117,6 @@ class AdminController extends Controller
             ->where('stock_movements.reason', '!=', 'order')
             ->sum(DB::raw('ABS(stock_movements.change) * ingredients.cost'));
 
-        // 3. Total Closing Stock Value
         $closingValue = DB::table('branch_inventory')
             ->join('ingredients', 'branch_inventory.ingredient_id', '=', 'ingredients.id')
             ->sum(DB::raw('branch_inventory.stock * ingredients.cost'));
@@ -114,125 +129,201 @@ class AdminController extends Controller
     }
 
     /* =========================================================================
-     | AJAX PERSISTENCE
+     | AJAX PERSISTENCE & TRANSACTION ERROR HANDLING
      | ========================================================================= */
 
     public function storeDrink(Request $request)
     {
-        $validated =$request->validate([
-            'id'            => 'nullable|exists:menu_items,id',
-            'name'          => 'required|string|max:255',
-            'price'         => 'required|numeric|min:0',
-            'drink_type_id' => 'nullable|exists:drink_types,id',
-            'recipe'        => 'nullable|array',
+        $validated = $request->validate([
+            'id'              => 'nullable|exists:menu_items,id',
+            'name'            => 'required|string|max:255',
+            'price'           => 'required|numeric|min:0',
+            'price_venti'     => 'nullable|numeric|min:0',
+            'has_sizes'       => 'nullable|boolean',
+            'has_temperature' => 'nullable|boolean',
+            'drink_type_id'   => 'nullable|exists:drink_types,id',
+            'recipe'          => 'nullable|array',
         ]);
 
-        return DB::transaction(function () use ($validated, $request) {$menuItem = MenuItem::updateOrCreate(
-                ['id' => $validated['id'] ?? null],
-                [
-                    'name'          => $validated['name'],
-                    'price'         => $validated['price'],
-                    'drink_type_id' => $validated['drink_type_id'] ?? null,
-                    'is_active'     => true,
-                ]
-            );
+        try {
+            return DB::transaction(function () use ($validated, $request) {
+                $menuItem = MenuItem::updateOrCreate(
+                    ['id' => $validated['id'] ?? null],
+                    [
+                        'name'            => $validated['name'],
+                        'price'           => $validated['price'],
+                        'price_venti'     => $validated['price_venti'] ?? null,
+                        'has_sizes'       => $request->boolean('has_sizes'),
+                        'has_temperature' => $request->boolean('has_temperature'),
+                        'drink_type_id'   => $validated['drink_type_id'] ?? null,
+                        'is_active'       => true,
+                    ]
+                );
 
-            if ($request->hasFile('image')) {
-                $path =$request->file('image')->store('drinks', 'public');
-                $menuItem->image_path = '/storage/' .$path;
-                $menuItem->save();
-            }
-
-            if (isset($validated['recipe'])) {$syncData = [];
-                foreach ($validated['recipe'] as $key =>$qty) {
-                    $ing = Ingredient::where('key',$key)->first();
-                    if ($ing) {$syncData[$ing->id] = ['quantity' =>$qty];
-                    }
+                if ($request->hasFile('image')) {
+                    $path = $request->file('image')->store('drinks', 'public');
+                    $menuItem->image_path = '/storage/' . $path;
+                    $menuItem->save();
                 }
-                $menuItem->ingredients()->sync($syncData);
-            }
 
+                if (isset($validated['recipe'])) {
+                    $syncData = [];
+                    foreach ($validated['recipe'] as $key => $qty) {
+                        $ing = Ingredient::where('key', $key)->first();
+                        if ($ing) {
+                            $syncData[$ing->id] = ['quantity' => $qty];
+                        }
+                    }
+                    $menuItem->ingredients()->sync($syncData);
+                }
+
+                return response()->json([
+                    'success' => true,
+                    'item'    => [
+                        'id'              => $menuItem->id,
+                        'name'            => $menuItem->name,
+                        'price'           => (float) $menuItem->price,
+                        'price_venti'     => $menuItem->price_venti ? (float)$menuItem->price_venti : null,
+                        'has_sizes'       => (bool) $menuItem->has_sizes,
+                        'has_temperature' => (bool) $menuItem->has_temperature,
+                        'drink_type_id'   => $menuItem->drink_type_id,
+                        'drink_type_name' => $menuItem->drinkType->name ?? null,
+                        'is_active'       => (bool) $menuItem->is_active,
+                        'image_path'      => $menuItem->image_path,
+                        'recipe'          => $validated['recipe'] ?? [],
+                    ]
+                ]);
+            });
+        } catch (\Throwable $e) {
             return response()->json([
-                'success' => true,
-                'item'    => [
-                    'id'              => $menuItem->id,
-                    'name'            => $menuItem->name,
-                    'price'           => (float) $menuItem->price,
-                    'drink_type_id'   => $menuItem->drink_type_id,
-                    'drink_type_name' => $menuItem->drinkType->name ?? null,
-                    'is_active'       => (bool) $menuItem->is_active,
-                    'image_path'      => $menuItem->image_path,
-                    'recipe'          => $validated['recipe'] ?? [],
-                ]
-            ]);
-        });
+                'success' => false,
+                'message' => 'Transaction failed while saving drink: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function storeDrinkType(Request $request)
+    {
+        $validated = $request->validate([
+            'name'   => 'required|string|max:255|unique:drink_types,name',
+            'addons' => 'nullable|array',
+        ]);
+
+        try {
+            return DB::transaction(function () use ($validated) {
+                $drinkType = DrinkType::create(['name' => $validated['name']]);
+
+                if (!empty($validated['addons'])) {
+                    $drinkType->addons()->sync($validated['addons']);
+                }
+
+                return response()->json([
+                    'success'    => true,
+                    'drink_type' => [
+                        'id'        => $drinkType->id,
+                        'name'      => $drinkType->name,
+                        'addon_ids' => $validated['addons'] ?? [],
+                    ]
+                ]);
+            });
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Transaction failed while creating category: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     public function toggleDrink(MenuItem $menuItem)
     {
-        $menuItem->is_active = !$menuItem->is_active;
-        $menuItem->save();
+        try {
+            $menuItem->is_active = !$menuItem->is_active;
+            $menuItem->save();
 
-        return response()->json(['success' => true, 'is_active' => $menuItem->is_active]);
+            return response()->json(['success' => true, 'is_active' => $menuItem->is_active]);
+        } catch (\Throwable $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
     }
 
     public function storeIngredient(Request $request)
     {
-        $validated =$request->validate([
+        $validated = $request->validate([
             'name'          => 'required|string|max:255',
             'unit'          => 'required|string|max:20',
             'reorder_level' => 'nullable|numeric|min:0',
             'cost'          => 'nullable|numeric|min:0',
         ]);
 
-        $key = Str::slug($validated['name'], '_');
+        try {
+            return DB::transaction(function () use ($validated) {
+                $key = Str::slug($validated['name'], '_');
 
-        $ingredient = Ingredient::create([
-            'key'           => $key,
-            'name'          => $validated['name'],
-            'unit'          => $validated['unit'],
-            'reorder_level' => $validated['reorder_level'] ?? 0,             'cost'          =>$validated['cost'] ?? 0,
-            'is_active'     => true,
-        ]);
+                $ingredient = Ingredient::create([
+                    'key'           => $key,
+                    'name'          => $validated['name'],
+                    'unit'          => $validated['unit'],
+                    'reorder_level' => $validated['reorder_level'] ?? 0,
+                    'cost'          => $validated['cost'] ?? 0,
+                    'is_active'     => true,
+                ]);
 
-        $branches = Branch::all();
-        foreach ($branches as$branch) {
-            DB::table('branch_inventory')->insert([
-                'branch_id'     => $branch->id,
-                'ingredient_id' => $ingredient->id,
-                'stock'         => 0,
-                'reorder_level' => $validated['reorder_level'] ?? 0,
-                'is_active'     => true,
-                'created_at'    => now(),
-                'updated_at'    => now(),
-            ]);
+                $branches = Branch::all();
+                foreach ($branches as $branch) {
+                    DB::table('branch_inventory')->insert([
+                        'branch_id'     => $branch->id,
+                        'ingredient_id' => $ingredient->id,
+                        'stock'         => 0,
+                        'reorder_level' => $validated['reorder_level'] ?? 0,
+                        'is_active'     => true,
+                        'created_at'    => now(),
+                        'updated_at'    => now(),
+                    ]);
+                }
+
+                return response()->json([
+                    'success'    => true,
+                    'ingredient' => [
+                        'id'        => $ingredient->id,
+                        'key'       => $ingredient->key,
+                        'name'      => $ingredient->name,
+                        'unit'      => $ingredient->unit,
+                        'reorder'   => (float) $ingredient->reorder_level,
+                        'cost'      => (float) $ingredient->cost,
+                        'is_active' => true,
+                    ]
+                ]);
+            });
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Transaction failed while registering raw ingredient: ' . $e->getMessage()
+            ], 500);
         }
-
-        return response()->json([
-            'success'    => true,
-            'ingredient' => [
-                'id'        => $ingredient->id,
-                'key'       => $ingredient->key,
-                'name'      => $ingredient->name,
-                'unit'      => $ingredient->unit,
-                'reorder'   => (float) $ingredient->reorder_level,
-                'cost'      => (float) $ingredient->cost,
-                'is_active' => true,
-            ]
-        ]);
     }
 
     public function toggleIngredient(Ingredient $ingredient)
     {
-        $ingredient->is_active = !$ingredient->is_active;
-        $ingredient->save();
+        try {
+            DB::transaction(function () use ($ingredient) {
+                $ingredient->is_active = !$ingredient->is_active;
+                $ingredient->save();
 
-        return response()->json(['success' => true, 'is_active' => $ingredient->is_active]);
+                // Cascade ingredient active state to all branch inventories
+                DB::table('branch_inventory')
+                    ->where('ingredient_id', $ingredient->id)
+                    ->update(['is_active' => $ingredient->is_active]);
+            });
+
+            return response()->json(['success' => true, 'is_active' => $ingredient->is_active]);
+        } catch (\Throwable $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
     }
 
     public function processStockOperation(Request $request)
     {
-        $validated =$request->validate([
+        $validated = $request->validate([
             'type'        => 'required|in:stock_in,stock_out,transfer',
             'branch'      => 'nullable|string',
             'from_branch' => 'nullable|string',
@@ -240,82 +331,120 @@ class AdminController extends Controller
             'items'       => 'required|array',
             'items.*.key' => 'required|string',
             'items.*.qty' => 'required|numeric|gt:0',
+            'items.*.unit'=> 'nullable|string',
             'reason'      => 'nullable|string',
         ]);
 
-        return DB::transaction(function () use ($validated) {
-            $type =$validated['type'];
+        $unitMultipliers = [
+            'L' => 1000, 'gal' => 3785.41, 'kg' => 1000, 'oz' => 28.3495,
+            'ml' => 1, 'g' => 1, 'pc' => 1, 'pack' => 1, 'box' => 1,
+        ];
 
-            if ($type === 'stock_in') {
-                $branch = Branch::where('name',$validated['branch'])->firstOrFail();
+        try {
+            return DB::transaction(function () use ($validated, $unitMultipliers) {
+                $type = $validated['type'];
+                $authUserId = auth()->id();
 
-                foreach ($validated['items'] as$itemData) {
-                    $ingredient = Ingredient::where('key',$itemData['key'])->firstOrFail();
-                    $qty = (float)$itemData['qty'];
+                if ($type === 'stock_in') {
+                    $branch = Branch::where('name', $validated['branch'])->firstOrFail();
 
-                    DB::table('branch_inventory')
-                        ->where('branch_id', $branch->id)
-                        ->where('ingredient_id', $ingredient->id)
-                        ->increment('stock', $qty);
+                    foreach ($validated['items'] as $itemData) {
+                        $ingredient = Ingredient::where('key', $itemData['key'])->firstOrFail();
+                        $inputUnit = $itemData['unit'] ?? $ingredient->unit;
+                        $qtyInBaseUnit = (float)$itemData['qty'] * ($unitMultipliers[$inputUnit] ?? 1);
 
-                    StockMovement::create([
-                        'ingredient_id' => $ingredient->id,
-                        'change'        => $qty,
-                        'reason'        => 'restock',
-                    ]);
+                        DB::table('branch_inventory')
+                            ->where('branch_id', $branch->id)
+                            ->where('ingredient_id', $ingredient->id)
+                            ->increment('stock', $qtyInBaseUnit);
+
+                        StockMovement::create([
+                            'ingredient_id' => $ingredient->id,
+                            'user_id'       => $authUserId,
+                            'change'        => $qtyInBaseUnit,
+                            'reason'        => 'Restock @ ' . $branch->name,
+                        ]);
+                    }
+                } elseif ($type === 'stock_out') {
+                    $branch = Branch::where('name', $validated['branch'])->firstOrFail();
+
+                    foreach ($validated['items'] as $itemData) {
+                        $ingredient = Ingredient::where('key', $itemData['key'])->firstOrFail();
+                        $inputUnit = $itemData['unit'] ?? $ingredient->unit;
+                        $qtyInBaseUnit = (float)$itemData['qty'] * ($unitMultipliers[$inputUnit] ?? 1);
+
+                        DB::table('branch_inventory')
+                            ->where('branch_id', $branch->id)
+                            ->where('ingredient_id', $ingredient->id)
+                            ->decrement('stock', $qtyInBaseUnit);
+
+                        StockMovement::create([
+                            'ingredient_id' => $ingredient->id,
+                            'user_id'       => $authUserId,
+                            'change'        => -$qtyInBaseUnit,
+                            'reason'        => ($validated['reason'] ?? 'Waste') . ' @ ' . $branch->name,
+                        ]);
+                    }
+                } elseif ($type === 'transfer') {
+                    $fromBranch = Branch::where('name', $validated['from_branch'])->firstOrFail();
+                    $toBranch   = Branch::where('name', $validated['to_branch'])->firstOrFail();
+
+                    foreach ($validated['items'] as $itemData) {
+                        $ingredient = Ingredient::where('key', $itemData['key'])->firstOrFail();
+                        $inputUnit = $itemData['unit'] ?? $ingredient->unit;
+                        $qtyInBaseUnit = (float)$itemData['qty'] * ($unitMultipliers[$inputUnit] ?? 1);
+
+                        $currentStock = DB::table('branch_inventory')
+                            ->where('branch_id', $fromBranch->id)
+                            ->where('ingredient_id', $ingredient->id)
+                            ->value('stock') ?? 0;
+
+                        if ($currentStock < $qtyInBaseUnit) {
+                            return response()->json([
+                                'success' => false,
+                                'message' => "Cannot transfer {$ingredient->name}. {$fromBranch->name} only has {$currentStock}{$ingredient->unit} on hand."
+                            ], 422);
+                        }
+                    }
+
+                    foreach ($validated['items'] as $itemData) {
+                        $ingredient = Ingredient::where('key', $itemData['key'])->firstOrFail();
+                        $inputUnit = $itemData['unit'] ?? $ingredient->unit;
+                        $qtyInBaseUnit = (float)$itemData['qty'] * ($unitMultipliers[$inputUnit] ?? 1);
+
+                        DB::table('branch_inventory')
+                            ->where('branch_id', $fromBranch->id)
+                            ->where('ingredient_id', $ingredient->id)
+                            ->decrement('stock', $qtyInBaseUnit);
+
+                        DB::table('branch_inventory')
+                            ->where('branch_id', $toBranch->id)
+                            ->where('ingredient_id', $ingredient->id)
+                            ->increment('stock', $qtyInBaseUnit);
+
+                        // Outgoing movement for Source Branch
+                        StockMovement::create([
+                            'ingredient_id' => $ingredient->id,
+                            'user_id'       => $authUserId,
+                            'change'        => -$qtyInBaseUnit,
+                            'reason'        => "Transfer: {$fromBranch->name} -> {$toBranch->name}",
+                        ]);
+
+                        // Incoming movement for Destination Branch
+                        StockMovement::create([
+                            'ingredient_id' => $ingredient->id,
+                            'user_id'       => $authUserId,
+                            'change'        => $qtyInBaseUnit,
+                            'reason'        => "Transfer: {$fromBranch->name} -> {$toBranch->name}",
+                        ]);
+                    }
                 }
-            } elseif ($type === 'stock_out') {
-                $branch = Branch::where('name',$validated['branch'])->firstOrFail();
 
-                foreach ($validated['items'] as$itemData) {
-                    $ingredient = Ingredient::where('key',$itemData['key'])->firstOrFail();
-                    $qty = (float)$itemData['qty'];
-
-                    DB::table('branch_inventory')
-                        ->where('branch_id', $branch->id)
-                        ->where('ingredient_id', $ingredient->id)
-                        ->decrement('stock', $qty);
-
-                    StockMovement::create([
-                        'ingredient_id' => $ingredient->id,
-                        'change'        => -$qty,
-                        'reason'        => $validated['reason'] ?? 'waste',
-                    ]);
-                }
-            } elseif ($type === 'transfer') {
-                $fromBranch = Branch::where('name',$validated['from_branch'])->firstOrFail();
-                $toBranch   = Branch::where('name',$validated['to_branch'])->firstOrFail();
-
-                foreach ($validated['items'] as$itemData) {
-                    $ingredient = Ingredient::where('key',$itemData['key'])->firstOrFail();
-                    $qty = (float)$itemData['qty'];
-
-                    DB::table('branch_inventory')
-                        ->where('branch_id', $fromBranch->id)
-                        ->where('ingredient_id', $ingredient->id)
-                        ->decrement('stock', $qty);
-
-                    DB::table('branch_inventory')
-                        ->where('branch_id', $toBranch->id)
-                        ->where('ingredient_id', $ingredient->id)
-                        ->increment('stock', $qty);
-
-                    StockMovement::create([
-                        'ingredient_id' => $ingredient->id,
-                        'change'        => -$qty,
-                        'reason'        => 'correction',
-                    ]);
-
-                    StockMovement::create([
-                        'ingredient_id' => $ingredient->id,
-                        'change'        => $qty,
-                        'reason'        => 'correction',
-                    ]);
-                }
-            }
-
-            return response()->json(['success' => true]);
-        });
+                return response()->json(['success' => true]);
+            });
+        } catch (\Throwable $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
     }
 
     /* =========================================================================
@@ -354,7 +483,7 @@ class AdminController extends Controller
             ->get();
 
         return $branchInventory->map(function ($row) use ($usedTodayMap) {
-            $branchUsed =$usedTodayMap->get($row->branch_id)?->where('ingredient_id',$row->ingredient_id)->first()?->total_used ?? 0;
+            $branchUsed = $usedTodayMap->get($row->branch_id)?->where('ingredient_id', $row->ingredient_id)->first()?->total_used ?? 0;
 
             return [
                 'id'          => $row->ingredient_id,
@@ -376,11 +505,13 @@ class AdminController extends Controller
     {
         return Order::with(['staff', 'branch', 'items.menuItem', 'items.addons'])
             ->latest()
+            ->limit(300)
             ->get()
             ->map(function ($order) {
-                $total =$order->items->sum(function ($item) {$itemTotal = $item->unit_price * $item->quantity;
-                    $addonTotal = $item->addons->sum('pivot.unit_price') *$item->quantity;
-                    return $itemTotal +$addonTotal;
+                $total = $order->items->sum(function ($item) {
+                    $itemTotal = $item->unit_price * $item->quantity;
+                    $addonTotal = $item->addons->sum('pivot.unit_price') * $item->quantity;
+                    return $itemTotal + $addonTotal;
                 });
 
                 return [
@@ -435,17 +566,38 @@ class AdminController extends Controller
 
     private function getFormattedStockMovements(): array
     {
-        return StockMovement::with(['ingredient', 'order'])
+        return StockMovement::with(['ingredient', 'order.branch', 'user'])
             ->latest()
-            ->limit(100)
+            ->limit(300)
             ->get()
-            ->map(fn ($m) => [
-                'id'         => $m->id,
-                'ingredient' => $m->ingredient->name ?? 'Unknown',
-                'change'     => (float) $m->change,
-                'reason'     => ucfirst($m->reason ?? 'movement'),
-                'date'       => $m->created_at->format('Y-m-d H:i'),
-            ])->toArray();
+            ->map(function ($m) {
+                $branchName =$m->order->branch->name ?? null;
+                $reason =$m->reason ?? '';
+
+                if (!$branchName) {
+                    if (preg_match('/Transfer:\s*(.+) -> (.+)/i', $reason,$matches)) {
+                        $from = trim($matches[1]);
+                        $to = trim($matches[2]);
+                        $branchName = ($m->change < 0) ? $from :$to;
+                    } elseif (preg_match('/@ (.+)/i', $reason, $matches)) {$branchName = trim($matches[1]);                     } else {$branchName = DB::table('branch_inventory')
+                            ->join('branches', 'branch_inventory.branch_id', '=', 'branches.id')
+                            ->where('branch_inventory.ingredient_id', $m->ingredient_id)
+                            ->value('branches.name') ?? 'Poblacion Main';
+                    }
+                }
+
+                $performedBy = $m->user->name ?? ($m->order->staff->name ?? 'Admin User');
+
+                return [
+                    'id'           => $m->id,
+                    'ingredient'   => $m->ingredient->name ?? 'Unknown',
+                    'branch'       => $branchName,
+                    'performed_by' => $performedBy,
+                    'change'       => (float) $m->change,
+                    'reason'       => ucfirst($reason ?: 'movement'),
+                    'date'         => $m->created_at->format('Y-m-d H:i'),
+                ];
+            })->toArray();
     }
 
     private function getSalesByDay(): array

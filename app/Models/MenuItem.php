@@ -6,11 +6,23 @@ use Illuminate\Database\Eloquent\Model;
 
 class MenuItem extends Model
 {
-    protected $fillable = ['name', 'price', 'drink_type_id', 'is_active', 'image_path'];
+    protected $fillable = [
+        'name', 
+        'price', 
+        'price_venti', 
+        'has_sizes', 
+        'has_temperature', 
+        'drink_type_id', 
+        'is_active', 
+        'image_path'
+    ];
 
     protected $casts = [
-        'price' => 'float',
-        'is_active' => 'boolean',
+        'price'           => 'float',
+        'price_venti'     => 'float',
+        'has_sizes'       => 'boolean',
+        'has_temperature' => 'boolean',
+        'is_active'       => 'boolean',
     ];
 
     public function drinkType()

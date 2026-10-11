@@ -63,7 +63,7 @@
 
         <table class="table table--click" id="receiptTable">
             <thead>
-                <tr><th>Order</th><th>Date &amp; time</th><th>Branch</th><th>Cashier</th><th>Items</th><th>Payment</th><th>Status</th><th class="ta-r">Total</th><th></th></tr>
+                <tr><th>Order</th><th>Date &amp; time</th><th>Branch</th><th>Cashier</th><th>Items</th><th>Payment</th><th>Status</th><th class="ta-r">Total</th><th>Action</th></tr>
             </thead>
             <tbody>
                 @foreach($orders as $order)

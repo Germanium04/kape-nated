@@ -1,4 +1,4 @@
-<x-admin.shell title="Inventory" heading="Inventory" subheading="Manage stock levels and record replenishments across branches.">
+<x-admin.shell title="Inventory Operations" heading="Inventory Operations" subheading="Log and audit stock deliveries and inter-branch transfers.">
 
     <x-slot:headerActions>
         <div class="header-actions-wrapper">
@@ -18,18 +18,18 @@
     <!-- Filter Panel -->
     <x-admin.panel title="" note="">
         <div class="tab-nav-row">
-            <button type="button" class="tab-btn tab-btn--active" id="tabRunningLow">
-                Running low <span id="runningLowBadge" class="badge badge--out tab-badge">0</span>
+            <button type="button" class="tab-btn tab-btn--active" id="tabAllItems">
+                All Transactions
             </button>
-            <button type="button" class="tab-btn tab-btn--inactive" id="tabAllItems">
-                All items
+            <button type="button" class="tab-btn tab-btn--inactive" id="tabRunningLow">
+                ⚠️ Running Low Alerts <span id="runningLowBadge" class="badge badge--out tab-badge">0</span>
             </button>
         </div>
 
-        <div class="filter-grid-row">
+        <div class="filter-grid-row" style="grid-template-columns: 2fr 1fr 1fr;">
             <label class="field-group fg-search">
-                <span>Search inventory</span>
-                <input type="search" class="field" id="stockSearch" placeholder="🔍 Search by item name">
+                <span>Search Ledger</span>
+                <input type="search" class="field" id="stockSearch" placeholder="🔍 Search Transaction ID, item, or branch...">
             </label>
 
             <label class="field-group fg-branch">
@@ -42,23 +42,13 @@
                 </select>
             </label>
 
-            <label class="field-group fg-status">
-                <span>Stock status</span>
+            <!-- Dynamic Third Filter: Action Type or Alert Severity -->
+            <label class="field-group fg-status" id="dynamicFilterWrapper">
+                <span id="dynamicFilterLabel">Transaction Type</span>
                 <select class="field" id="stockStatusFilter">
-                    <option value="all">All statuses</option>
-                    <option value="low">Running low</option>
-                    <option value="healthy">Healthy</option>
-                    <option value="out">Out of stock / Disabled</option>
-                </select>
-            </label>
-
-            <label class="field-group fg-unit">
-                <span>Unit</span>
-                <select class="field" id="stockUnitFilter">
-                    <option value="all">All units</option>
-                    <option value="ml">ml</option>
-                    <option value="g">g</option>
-                    <option value="pc">pc</option>
+                    <option value="all">All Action Types</option>
+                    <option value="stock_in">📦 Stock Deliveries (Stock-In)</option>
+                    <option value="transfer">↔ Branch Transfers</option>
                 </select>
             </label>
         </div>
@@ -66,30 +56,20 @@
 
     <div class="section-spacer-sm"></div>
 
-    <!-- Ingredients Live Stock Room Panel -->
-    <x-admin.panel title="Ingredients Stock Room" note="On-hand stock levels update dynamically as POS orders are fulfilled">
+    <!-- Stock Operations Panel -->
+    <x-admin.panel id="ledgerPanel" title="Stock Operations Ledger" note="Real-time log of manual supply deliveries and inter-branch transfers">
         <x-slot:tools>
-            <button type="button" class="btn btn--primary btn--sm" data-open-modal="inventoryActionModal">📦 Manage Inventory</button>
+            <button type="button" class="btn btn--primary btn--sm" data-open-modal="inventoryActionModal">📦 New Stock Operation</button>
         </x-slot:tools>
 
         <table class="table" id="stockTable">
-            <thead>
-                <tr>
-                    <th>Branch</th>
-                    <th>Ingredient</th>
-                    <th class="ta-r">On hand</th>
-                    <th class="ta-r">Used today</th>
-                    <th class="ta-r">Reorder at</th>
-                    <th>Status</th>
-                    <th class="ta-r">Stock value</th>
-                </tr>
-            </thead>
-            <tbody><!-- rendered by JS --></tbody>
+            <thead><!-- Dynamic JS headers --></thead>
+            <tbody><!-- Dynamic JS content --></tbody>
         </table>
 
-        <!-- Receipts-style Pagination Bar -->
+        <!-- Pagination Bar -->
         <div id="inventoryPagination" class="pagination-bar pagination-wrapper" hidden>
-            <span id="inventoryPageInfo" class="muted text-sm">Showing 1–10 of 0 items</span>
+            <span id="inventoryPageInfo" class="muted text-sm">Showing 1–10 of 0 records</span>
             <div class="pagination-controls-group">
                 <button type="button" id="inventoryPrevBtn" class="btn btn--ghost btn--sm">Previous</button>
                 <div id="inventoryPageNumbers" class="pagination-numbers-group"></div>
@@ -98,74 +78,14 @@
         </div>
     </x-admin.panel>
 
-    <!-- Modal 1: Register New Raw Ingredient -->
-    <x-admin.modal id="addIngredientModal" title="Register New Raw Ingredient" size="md">
-        <p class="panel-intro">Register a brand new raw ingredient into the system's global master list.</p>
-
-        <div class="field-horizontal form-row-spacing">
-            <label class="field-group fg-search">
-                <span>Ingredient Name</span>
-                <input type="text" class="field" id="invIngName" placeholder="e.g. Oat Milk">
-            </label>
-            <label class="field-group fg-branch">
-                <span>Category (Optional)</span>
-                <input type="text" class="field" id="invIngCategory" placeholder="e.g. Dairy, Syrup">
-            </label>
-        </div>
-
-        <div class="field-horizontal form-row-spacing">
-            <label class="field-group fg-branch">
-                <span>Measurement Type</span>
-                <select class="field" id="invIngUnitType">
-                    <option value="volume">Liquid / Volume (ml)</option>
-                    <option value="weight">Solid / Weight (g)</option>
-                    <option value="count">Item Count / Pieces (pc)</option>
-                </select>
-            </label>
-
-            <label class="field-group fg-branch">
-                <span>Base Unit</span>
-                <select class="field" id="invIngBaseUnit">
-                    <option value="ml">Milliliters (ml)</option>
-                    <option value="g">Grams (g)</option>
-                    <option value="pc">Pieces (pc)</option>
-                </select>
-            </label>
-
-            <label class="field-group fg-branch">
-                <span>Purchase Packaging</span>
-                <select class="field" id="invIngPurchaseUnit">
-                    <option value="1L Bottle" data-factor="1000">1 Liter Bottle (1,000 ml)</option>
-                    <option value="Gallon" data-factor="3785.41">Gallon (3,785.41 ml)</option>
-                    <option value="500ml Pack" data-factor="500">500ml Pack</option>
-                </select>
-            </label>
-        </div>
-
-        <div class="field-horizontal">
-            <label class="field-group fg-branch">
-                <span>Reorder Point (Base Unit)</span>
-                <input type="number" step="any" inputmode="decimal" class="field" id="invIngReorder" placeholder="e.g. 1000">
-            </label>
-            <label class="field-group fg-branch">
-                <span>Estimated Cost per Base Unit (₱)</span>
-                <input type="number" step="any" inputmode="decimal" class="field" id="invIngCost" placeholder="e.g. 0.15">
-            </label>
-        </div>
-
-        <x-slot:footer>
-            <button type="button" class="btn btn--ghost" data-close-modal="addIngredientModal">Cancel</button>
-            <button type="button" class="btn btn--primary" id="saveInvIngredientBtn">Save Ingredient</button>
-        </x-slot:footer>
-    </x-admin.modal>
-
-    <!-- Modal 2: Dynamic Operations Modal -->
+    <!-- Modal 1: Operations Modal (Admin Only: Delivery & Transfer) -->
     <x-admin.modal id="inventoryActionModal" title="Stock Operation" size="md">
+        <div id="invFormNotice" style="display: none; padding: 10px 14px; border-radius: 6px; font-size: 12px; margin-bottom: 12px; font-weight: 500;"></div>
+
         <label class="field-group form-row-spacing">
             <span class="text-ink-bold">Select Action Type</span>
             <select class="field action-type-select" id="invActionType">
                 <option value="stock_in">📦 Stock Delivery (Stock-In)</option>
-                <option value="stock_out">🗑️ Stock Deduction / Spoilage (Stock-Out)</option>
                 <option value="transfer">↔ Branch Stock Transfer</option>
             </select>
         </label>
@@ -174,7 +94,7 @@
 
         <!-- SECTION 1: Batch Stock-In -->
         <div id="secStockIn" class="action-section">
-            <p class="panel-intro">Log a delivery containing one or multiple ingredients into a branch's stock room.</p>
+            <p class="panel-intro">Log a supply delivery containing one or multiple ingredients into a branch's stock room.</p>
             <div class="field-horizontal form-row-spacing">
                 <label class="field-group fg-branch">
                     <span>Receiving Branch</span>
@@ -186,8 +106,8 @@
                 </label>
 
                 <label class="field-group fg-branch">
-                    <span>Supplier / Invoice No.</span>
-                    <input type="text" class="field" id="stockInRef" placeholder="e.g. Invoice #1042">
+                    <span>Supplier / Invoice Ref</span>
+                    <input type="text" class="field" id="stockInRef" placeholder="e.g. Invoice #1042 or Self-Made">
                 </label>
             </div>
 
@@ -196,33 +116,7 @@
             <button type="button" class="btn btn--ghost btn--sm" id="addStockInRowBtn">+ Add Another Item</button>
         </div>
 
-        <!-- SECTION 2: Stock-Out / Spoilage -->
-        <div id="secStockOut" class="action-section" hidden>
-            <p class="panel-intro">Log manual inventory deductions for spoilage, damage, spills, or audit adjustments.</p>
-            <div class="field-horizontal form-row-spacing">
-                <label class="field-group fg-search">
-                    <span>Ingredient</span>
-                    <select class="field" id="stockOutIngredientSelect"></select>
-                </label>
-
-                <label class="field-group fg-branch">
-                    <span>Deduction Qty</span>
-                    <input type="number" step="any" inputmode="decimal" class="field" id="stockOutQtyInput" placeholder="e.g. 500">
-                </label>
-            </div>
-
-            <label class="field-group">
-                <span>Reason for Stock-Out</span>
-                <select class="field" id="stockOutReasonSelect">
-                    <option value="spoilage">Expired / Spoiled</option>
-                    <option value="spill">Spilled / Preparation Mistake</option>
-                    <option value="damage">Damaged Delivery Packaging</option>
-                    <option value="audit">Inventory Count Correction</option>
-                </select>
-            </label>
-        </div>
-
-        <!-- SECTION 3: Inter-Branch Stock Transfer -->
+        <!-- SECTION 2: Inter-Branch Stock Transfer -->
         <div id="secTransfer" class="action-section" hidden>
             <p class="panel-intro">Transfer stock items from a source branch to a destination branch.</p>
             <div class="field-horizontal form-row-spacing">
@@ -256,6 +150,43 @@
         </x-slot:footer>
     </x-admin.modal>
 
+    <!-- Modal 1b: Confirmation Dialogue -->
+    <x-admin.modal id="confirmInvActionModal" title="Confirm Stock Operation" size="sm">
+        <div style="padding: 10px 0; text-align: center;">
+            <div style="font-size: 32px; margin-bottom: 8px;">📦</div>
+            <p style="margin: 0 0 6px; font-weight: 600; font-size: 15px;">Are you sure you want to commit this operation?</p>
+            <p style="margin: 0; font-size: 12.5px; color: var(--ink-soft);" id="confirmInvText">Branch stock balances will be updated immediately.</p>
+        </div>
+        <x-slot:footer>
+            <button type="button" class="btn btn--ghost" data-close-modal="confirmInvActionModal">Cancel</button>
+            <button type="button" class="btn btn--primary" id="btnConfirmFinalInvSave">Okay, Save Operation</button>
+        </x-slot:footer>
+    </x-admin.modal>
+
+    <!-- Modal 1c: Success Modal -->
+    <x-admin.modal id="successInvModal" title="Operation Complete" size="sm">
+        <div style="padding: 14px 0; text-align: center;">
+            <div style="font-size: 36px; margin-bottom: 8px;">✅</div>
+            <p style="margin: 0 0 4px; font-weight: 700; font-size: 16px; color: var(--good, #46703f);" id="successInvTitle">Success!</p>
+            <p style="margin: 0; font-size: 13px; color: var(--ink-soft);" id="successInvText">Inventory operation recorded successfully!</p>
+        </div>
+        <x-slot:footer>
+            <button type="button" class="btn btn--primary" id="btnSuccessModalClose" data-close-modal="successInvModal">Okay</button>
+        </x-slot:footer>
+    </x-admin.modal>
+
+    <!-- Modal 1d: Error Dialogue Modal -->
+    <x-admin.modal id="errorInvModal" title="Operation Failed" size="sm">
+        <div style="padding: 14px 0; text-align: center;">
+            <div style="font-size: 36px; margin-bottom: 8px;">⚠️</div>
+            <p style="margin: 0 0 4px; font-weight: 700; font-size: 16px; color: #c0392b;" id="errorInvTitle">Failed!</p>
+            <p style="margin: 0; font-size: 13px; color: var(--ink-soft);" id="errorInvText">An unexpected error occurred during the transaction.</p>
+        </div>
+        <x-slot:footer>
+            <button type="button" class="btn btn--primary" data-close-modal="errorInvModal">Understood</button>
+        </x-slot:footer>
+    </x-admin.modal>
+
     @push('scripts')
         <script src="{{ asset('js/Admin3.js') }}"></script>
         <script>
@@ -263,6 +194,7 @@
                 ingredients:   @json($ingredients),
                 recipes:       @json($recipes),
                 branchWeights: @json($branchWeights),
+                movements:     @json($movements ?? []),
             };
             initInventory();
         </script>

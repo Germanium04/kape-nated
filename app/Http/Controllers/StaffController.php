@@ -91,18 +91,30 @@ class StaffController extends Controller
             });
 
         $addonTypeMap = DB::table('addon_drink_type')->get()->groupBy('addon_id');
+        $addonRecipes = DB::table('addon_ingredient')->get()->groupBy('addon_id');
 
         $addons = DB::table('addons')
             ->orderBy('id')
             ->get(['id', 'name', 'price'])
-            ->map(fn ($a) => [
-                'id'             => $a->id,
-                'name'           => $a->name,
-                'price'          => (float) $a->price,
-                'drink_type_ids' => isset($addonTypeMap[$a->id])
-                    ? $addonTypeMap[$a->id]->pluck('drink_type_id')->map(fn ($id) => (int) $id)->values()->all()
-                    : [],
-            ]);
+            ->map(function ($a) use ($addonTypeMap, $addonRecipes, $ingredients) {
+                $aRecipes = $addonRecipes[$a->id] ?? collect();
+                
+                $isAddonDisabled = $aRecipes->contains(function ($r) use ($ingredients) {
+                    $ing = $ingredients[$r->ingredient_id] ?? null;
+                    if (!$ing) return true;
+                    return ($ing->stock <= 0) || !$ing->global_active || ($ing->branch_active === 0);
+                });
+
+                return [
+                    'id'              => $a->id,
+                    'name'            => $a->name,
+                    'price'           => (float) $a->price,
+                    'is_disabled'     => $isAddonDisabled,
+                    'drink_type_ids'  => isset($addonTypeMap[$a->id])
+                        ? $addonTypeMap[$a->id]->pluck('drink_type_id')->map(fn ($id) => (int) $id)->values()->all()
+                        : [],
+                ];
+            });
 
         return view('layouts.staff.Order', [
             'menu'   => $menu,
@@ -110,6 +122,15 @@ class StaffController extends Controller
             'nextNo' => $this->nextOrderNo(),
             'branch' => $this->branchName($request),
         ]);
+    }
+
+    private function nextOrderNo(): string
+    {
+        $maxOrderNo = DB::table('orders')
+            ->selectRaw('MAX(CAST(order_no AS UNSIGNED)) as max_no')
+            ->value('max_no');
+
+        return str_pad((string) (((int) $maxOrderNo) + 1), 4, '0', STR_PAD_LEFT);
     }
 
     public function storeOrder(Request $request)
@@ -130,129 +151,165 @@ class StaffController extends Controller
             throw ValidationException::withMessages(['items' => 'Your account has no branch assigned. Ask an admin to set one.']);
         }
 
-        $result = DB::transaction(function () use ($data, $user) {
-            $menu         = DB::table('menu_items')
-                ->leftJoin('drink_types', 'drink_types.id', '=', 'menu_items.drink_type_id')
-                ->whereIn('menu_items.id', array_column($data['items'], 'id'))
-                ->get(['menu_items.*', 'drink_types.name as type_name'])
-                ->keyBy('id');
-            $recipes      = DB::table('menu_item_ingredient')->whereIn('menu_item_id', $menu->keys())->get()->groupBy('menu_item_id');
-            $addons       = DB::table('addons')->get()->keyBy('id');
-            $addonRecipes = DB::table('addon_ingredient')->get()->groupBy('addon_id');
-            $addonTypes   = DB::table('addon_drink_type')->get()->groupBy('addon_id');
+        $attempts = 0;
+        $maxAttempts = 5;
 
-            $total = 0;
-            $lines = [];
-            $need  = [];
+        do {
+            try {
+                $result = DB::transaction(function () use ($data, $user) {
+                    $menu = DB::table('menu_items')
+                        ->leftJoin('drink_types', 'drink_types.id', '=', 'menu_items.drink_type_id')
+                        ->whereIn('menu_items.id', array_column($data['items'], 'id'))
+                        ->get(['menu_items.*', 'drink_types.name as type_name'])
+                        ->keyBy('id');
+                    $recipes      = DB::table('menu_item_ingredient')->whereIn('menu_item_id', $menu->keys())->get()->groupBy('menu_item_id');
+                    $addons       = DB::table('addons')->get()->keyBy('id');
+                    $addonRecipes = DB::table('addon_ingredient')->get()->groupBy('addon_id');
+                    $addonTypes   = DB::table('addon_drink_type')->get()->groupBy('addon_id');
 
-            foreach ($data['items'] as $row) {
-                $item   = $menu[$row['id']];
-                $picked = collect($row['addons'] ?? [])->unique()->map(fn ($id) => $addons[$id]);
+                    $total = 0;
+                    $lines = [];
+                    $need  = [];
 
-                $size  = null;
-                $price = $item->price;
-                if ($item->has_sizes) {
-                    $values = array_column($this->sizeSet($item->type_name), 0);
-                    $size   = in_array($row['size'] ?? null, $values, true) ? $row['size'] : $values[0];
-                    if ($size === $values[1] && $item->price_venti !== null) {
-                        $price = $item->price_venti;
+                    foreach ($data['items'] as $row) {
+                        $item   = $menu[$row['id']];
+                        $picked = collect($row['addons'] ?? [])->unique()->map(fn ($id) => $addons[$id]);
+
+                        $size  = null;
+                        $price = $item->price;
+                        if ($item->has_sizes) {
+                            $values = array_column($this->sizeSet($item->type_name), 0);
+                            $size   = in_array($row['size'] ?? null, $values, true) ? $row['size'] : $values[0];
+                            if ($size === $values[1] && $item->price_venti !== null) {
+                                $price = $item->price_venti;
+                            }
+                        }
+                        $temp  = $item->has_temperature ? ($row['temp'] ?? 'cold') : null;
+
+                        foreach ($picked as $a) {
+                            $only = $addonTypes[$a->id] ?? null;
+                            if ($only && ! $only->contains('drink_type_id', $item->drink_type_id)) {
+                                throw ValidationException::withMessages(['items' => "{$a->name} can't be added to {$item->name}."]);
+                            }
+                        }
+
+                        $total += ($price + $picked->sum('price')) * $row['qty'];
+
+                        foreach ($recipes[$item->id] ?? [] as $r) {
+                            $need[$r->ingredient_id] = ($need[$r->ingredient_id] ?? 0) + $r->quantity * $row['qty'];
+                        }
+                        foreach ($picked as $addon) {
+                            foreach ($addonRecipes[$addon->id] ?? [] as $r) {
+                                $need[$r->ingredient_id] = ($need[$r->ingredient_id] ?? 0) + $r->quantity * $row['qty'];
+                            }
+                        }
+
+                        $lines[] = ['item' => $item, 'qty' => $row['qty'], 'price' => $price, 'size' => $size, 'temp' => $temp, 'addons' => $picked];
                     }
-                }
-                $temp  = $item->has_temperature ? ($row['temp'] ?? 'cold') : null;
 
-                foreach ($picked as $a) {
-                    $only = $addonTypes[$a->id] ?? null;
-                    if ($only && ! $only->contains('drink_type_id', $item->drink_type_id)) {
-                        throw ValidationException::withMessages(['items' => "{$a->name} can't be added to {$item->name}."]);
+                    $stock = DB::table('branch_inventory')
+                        ->join('ingredients', 'ingredients.id', '=', 'branch_inventory.ingredient_id')
+                        ->where('branch_inventory.branch_id', $user->branch_id)
+                        ->whereIn('branch_inventory.ingredient_id', array_keys($need))
+                        ->lockForUpdate()
+                        ->get([
+                            'branch_inventory.*',
+                            'ingredients.name',
+                            'ingredients.unit',
+                            'ingredients.is_active as global_active'
+                        ])
+                        ->keyBy('ingredient_id');
+
+                    foreach ($need as $id => $qty) {
+                        $itemStock = $stock[$id] ?? null;
+
+                        if (!$itemStock || !$itemStock->global_active || $itemStock->is_active == 0) {
+                            $name = $itemStock->name ?? 'an ingredient';
+                            throw ValidationException::withMessages([
+                                'items' => "Cannot complete order: '{$name}' has been disabled or deactivated by Admin."
+                            ]);
+                        }
+
+                        if ((float) $itemStock->stock < $qty) {
+                            $name = $itemStock->name;
+                            $avail = number_format(max(0, (float) $itemStock->stock), 2);
+                            throw ValidationException::withMessages([
+                                'items' => "Cannot complete order: Not enough {$name} in stock (Available: {$avail} {$itemStock->unit})."
+                            ]);
+                        }
                     }
-                }
 
-                $total += ($price + $picked->sum('price')) * $row['qty'];
+                    $now = now();
+                    $orderNo = $this->nextOrderNo();
 
-                foreach ($recipes[$item->id] ?? [] as $r) {
-                    $need[$r->ingredient_id] = ($need[$r->ingredient_id] ?? 0) + $r->quantity * $row['qty'];
-                }
-                foreach ($picked as $addon) {
-                    foreach ($addonRecipes[$addon->id] ?? [] as $r) {
-                        $need[$r->ingredient_id] = ($need[$r->ingredient_id] ?? 0) + $r->quantity * $row['qty'];
-                    }
-                }
-
-                $lines[] = ['item' => $item, 'qty' => $row['qty'], 'price' => $price, 'size' => $size, 'temp' => $temp, 'addons' => $picked];
-            }
-
-            $stock = DB::table('branch_inventory')
-                ->join('ingredients', 'ingredients.id', '=', 'branch_inventory.ingredient_id')
-                ->where('branch_inventory.branch_id', $user->branch_id)
-                ->whereIn('branch_inventory.ingredient_id', array_keys($need))
-                ->lockForUpdate()
-                ->get(['branch_inventory.*', 'ingredients.name', 'ingredients.unit'])
-                ->keyBy('ingredient_id');
-
-            foreach ($need as $id => $qty) {
-                if (!isset($stock[$id]) || (float) $stock[$id]->stock < $qty) {
-                    $name = $stock[$id]->name ?? 'an ingredient';
-                    $avail = number_format(max(0, (float) ($stock[$id]->stock ?? 0)), 2);
-                    throw ValidationException::withMessages(['items' => "Cannot complete order: Not enough {$name} in stock (Available: {$avail} {$stock[$id]->unit})."]);
-                }
-            }
-
-            $now = now();
-            $orderNo = $this->nextOrderNo();
-
-            $orderId = DB::table('orders')->insertGetId([
-                'order_no'       => $orderNo,
-                'user_id'        => $user->id,
-                'branch_id'      => $user->branch_id,
-                'payment_method' => $data['payment'],
-                'status'         => 'completed',
-                'created_at'     => $now,
-                'updated_at'     => $now,
-            ]);
-
-            foreach ($lines as $l) {
-                $itemId = DB::table('order_items')->insertGetId([
-                    'order_id'     => $orderId,
-                    'menu_item_id' => $l['item']->id,
-                    'quantity'     => $l['qty'],
-                    'unit_price'   => $l['price'],
-                    'size'         => $l['size'],
-                    'temperature'  => $l['temp'],
-                    'created_at'   => $now,
-                    'updated_at'   => $now,
-                ]);
-
-                foreach ($l['addons'] as $a) {
-                    DB::table('order_item_addon')->insert([
-                        'order_item_id' => $itemId,
-                        'addon_id'      => $a->id,
-                        'unit_price'    => $a->price,
-                        'created_at'    => $now,
-                        'updated_at'    => $now,
+                    $orderId = DB::table('orders')->insertGetId([
+                        'order_no'       => $orderNo,
+                        'user_id'        => $user->id,
+                        'branch_id'      => $user->branch_id,
+                        'payment_method' => $data['payment'],
+                        'status'         => 'completed',
+                        'created_at'     => $now,
+                        'updated_at'     => $now,
                     ]);
+
+                    foreach ($lines as $l) {
+                        $itemId = DB::table('order_items')->insertGetId([
+                            'order_id'     => $orderId,
+                            'menu_item_id' => $l['item']->id,
+                            'quantity'     => $l['qty'],
+                            'unit_price'   => $l['price'],
+                            'size'         => $l['size'],
+                            'temperature'  => $l['temp'],
+                            'created_at'   => $now,
+                            'updated_at'   => $now,
+                        ]);
+
+                        foreach ($l['addons'] as $a) {
+                            DB::table('order_item_addon')->insert([
+                                'order_item_id' => $itemId,
+                                'addon_id'      => $a->id,
+                                'unit_price'    => $a->price,
+                                'created_at'    => $now,
+                                'updated_at'    => $now,
+                            ]);
+                        }
+                    }
+
+                    foreach ($need as $id => $qty) {
+                        DB::table('branch_inventory')
+                            ->where('branch_id', $user->branch_id)
+                            ->where('ingredient_id', $id)
+                            ->decrement('stock', $qty, ['updated_at' => $now]);
+
+                        DB::table('stock_movements')->insert([
+                            'ingredient_id' => $id,
+                            'order_id'      => $orderId,
+                            'change'        => -$qty,
+                            'reason'        => 'order',
+                            'created_at'    => $now,
+                            'updated_at'    => $now,
+                        ]);
+                    }
+
+                    return ['order_no' => $orderNo, 'total' => (float) $total];
+                });
+
+                return response()->json($result + ['next_no' => $this->nextOrderNo()]);
+
+            } catch (\Illuminate\Database\QueryException $e) {
+                if ($e->getCode() == 23000) {
+                    $attempts++;
+                    if ($attempts >= $maxAttempts) {
+                        throw ValidationException::withMessages([
+                            'items' => 'Order transaction collision. Please tap Complete Order again.'
+                        ]);
+                    }
+                    usleep(100000);
+                } else {
+                    throw $e;
                 }
             }
-
-            foreach ($need as $id => $qty) {
-                DB::table('branch_inventory')
-                    ->where('branch_id', $user->branch_id)
-                    ->where('ingredient_id', $id)
-                    ->decrement('stock', $qty, ['updated_at' => $now]);
-
-                DB::table('stock_movements')->insert([
-                    'ingredient_id' => $id,
-                    'order_id'      => $orderId,
-                    'change'        => -$qty,
-                    'reason'        => 'order',
-                    'created_at'    => $now,
-                    'updated_at'    => $now,
-                ]);
-            }
-
-            return ['order_no' => $orderNo, 'total' => (float) $total];
-        });
-
-        return response()->json($result + ['next_no' => $this->nextOrderNo()]);
+        } while ($attempts < $maxAttempts);
     }
 
     /* ----------------------------- inventory ---------------------------- */
@@ -377,11 +434,6 @@ class StaffController extends Controller
             ->get(['ingredient_id', 'change'])
             ->groupBy('ingredient_id')
             ->map(fn ($rows) => abs($rows->sum('change')));
-    }
-
-    private function nextOrderNo(): string
-    {
-        return str_pad((string) (((int) DB::table('orders')->max('order_no')) + 1), 4, '0', STR_PAD_LEFT);
     }
 
     private function branchName(Request $request): ?string

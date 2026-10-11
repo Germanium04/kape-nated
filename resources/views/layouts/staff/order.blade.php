@@ -101,15 +101,38 @@
     <button type="button" class="btn" id="mAdd">Add to Order</button>
 </x-staff.modal>
 
-<!-- Clean Single-Column Order Receipt Modal -->
-<div class="modal" id="receiptModal" hidden>
-    <div class="receipt-modal-box">
-        <div class="receipt-modal-header">
-            <h2>Order Completed!</h2>
-            <p id="rcptMeta" class="m-type"></p>
+<!-- Order Pre-Confirmation Dialogue Modal -->
+<div class="backdrop" id="confirmOrderModal">
+    <div class="modal modal--single">
+        <div style="text-align: center;">
+            <div style="font-size: 32px; margin-bottom: 6px;">☕</div>
+            <h2 style="font-size: 18px; margin: 0 0 4px; border-bottom: none; padding: 0;">Confirm Order</h2>
+            <p style="margin: 0 0 12px; font-size: 12.5px; color: var(--ink-soft);">Please review order total before processing</p>
+
+            <div style="margin: 12px 0; padding: 14px; background: var(--bg-soft, #fdf6ee); border-radius: 8px; border: 1px solid var(--line-soft, #eee);">
+                <p style="margin: 0; font-size: 11.5px; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.5px;">Total Amount Due</p>
+                <p id="confirmModalTotal" style="font-size: 26px; font-weight: 700; color: var(--bar); margin: 4px 0 0;">₱0.00</p>
+                <p id="confirmModalPayType" style="font-size: 12px; margin: 4px 0 0; font-weight: 600; text-transform: uppercase; color: var(--ink-soft);"></p>
+            </div>
         </div>
 
-        <div class="modal-content-scroll" style="overflow-y: auto; max-height: 55vh;">
+        <div style="display: flex; gap: 8px; margin-top: 14px;">
+            <button type="button" class="btn btn--ghost" id="btnCancelOrderConfirm" style="flex: 1; margin: 0;">Cancel</button>
+            <button type="button" class="btn btn--primary" id="btnSubmitOrderConfirm" style="flex: 1; margin: 0;">Okay, Complete</button>
+        </div>
+    </div>
+</div>
+
+<!-- Order Success Receipt Dialogue Modal -->
+<div class="backdrop" id="receiptModal">
+    <div class="modal modal--single" style="width: min(440px, 92vw); max-height: 90vh;">
+        <div style="text-align: center; margin-bottom: 12px;">
+            <div style="font-size: 36px; margin-bottom: 4px;">✅</div>
+            <h2 style="font-size: 18px; margin: 0 0 2px; border-bottom: none; padding: 0; color: var(--good, #46703f);">Order Completed!</h2>
+            <p id="rcptMeta" style="margin: 0; font-size: 12.5px; color: var(--ink-soft);"></p>
+        </div>
+
+        <div class="modal-content-scroll" style="overflow-y: auto; max-height: 50vh;">
             <div id="receiptPrintArea" class="receipt-paper">
                 <div class="receipt-paper-head">
                     <h3>Kape-nated</h3>
@@ -137,21 +160,37 @@
             </div>
         </div>
 
-        <div class="receipt-modal-actions" style="margin-top: 14px;">
-            <button type="button" class="btn btn--ghost btn--sm" data-close-modal="receiptModal" style="margin: 0; flex: 1;">Done</button>
-            <button type="button" class="btn btn--primary btn--sm" id="btnPrintReceipt" style="margin: 0; flex: 1;">🖨️ Print Receipt</button>
+        <div style="display: flex; gap: 8px; margin-top: 14px;">
+            <button type="button" class="btn btn--ghost" data-close-modal="receiptModal" style="flex: 1; margin: 0;">Done</button>
+            <button type="button" class="btn btn--primary" id="btnPrintReceipt" style="flex: 1; margin: 0;">🖨️ Print Receipt</button>
+        </div>
+    </div>
+</div>
+
+<!-- Order Error Dialogue Modal -->
+<div class="backdrop" id="orderErrorModal">
+    <div class="modal modal--single" style="text-align: center;">
+        <div style="font-size: 36px; margin-bottom: 6px;">⚠️</div>
+        <h2 style="font-size: 18px; margin: 0 0 4px; border-bottom: none; padding: 0; color: var(--flag, #a63d2a);" id="orderErrorTitle">Transaction Error</h2>
+        <p style="margin: 6px 0 14px; font-size: 13px; color: var(--ink-soft);" id="orderErrorText">An unexpected error occurred while processing the order.</p>
+
+        <div style="margin-top: 8px;">
+            <button type="button" class="btn btn--primary" data-close-modal="orderErrorModal" style="margin: 0; width: 100%;">Understood</button>
         </div>
     </div>
 </div>
 
 @push('scripts')
+    <script src="{{ asset('js/Staff.js') }}"></script>
     <script>
         window.KAPE_ORDER = {
             menu:     @json($menu),
             addons:   @json($addons),
             storeUrl: @json(route('staff.orders.store')),
         };
-        initStaffOrder();
+        document.addEventListener('DOMContentLoaded', () => {
+            initStaffOrder();
+        });
     </script>
 @endpush
 

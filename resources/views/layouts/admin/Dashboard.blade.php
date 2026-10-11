@@ -9,12 +9,12 @@
     $week     = array_sum(array_map(fn ($d) => $d['cash'] + $d['gcash'], $sales));
 @endphp
 
-<x-admin.shell title="Dashboard" heading="Good afternoon, boss" subheading="Friday, 19 September 2026 · store open since 7:00 AM">
+<x-admin.shell title="Dashboard" heading="Good afternoon, Boss" subheading="Friday, 19 September 2026 · store open since 7:00 AM">
 
     <div class="stat-row">
         <x-admin.stat label="Sales today"   value="₱{{ number_format($salesToday, 2) }}" trend="+14% vs yesterday" tone="up" />
         <x-admin.stat label="Orders today"  value="{{ $ordersToday }}" trend="3 in the last hour" />
-        <x-admin.stat label="Gross Income" value="₱{{ number_format($avgTicket, 2) }}" trend="+₱22 vs last week" tone="up" />
+        <x-admin.stat label="Average Ticket" value="₱{{ number_format($avgTicket, 2) }}" trend="+₱22 vs last week" tone="up" />
         <x-admin.stat label="Items to reorder" value="{{ count($lowStock) }}" trend="Check the stock room" tone="alert" onclick/>
     </div>
 

@@ -45,6 +45,7 @@ Route::prefix('admin')
         // Database Persistence AJAX Endpoints
         Route::post('/drinks/store', 'storeDrink')->name('drinks.store');
         Route::patch('/drinks/{menuItem}/toggle', 'toggleDrink')->name('drinks.toggle');
+        Route::post('/drink-types/store', 'storeDrinkType')->name('drink-types.store');
         Route::post('/ingredients/store', 'storeIngredient')->name('ingredients.store');
         Route::patch('/ingredients/{ingredient}/toggle', 'toggleIngredient')->name('ingredients.toggle');
         Route::post('/inventory/operation', 'processStockOperation')->name('inventory.operation');

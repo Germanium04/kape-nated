@@ -5,19 +5,45 @@
 document.addEventListener('click', (e) => {
     const close = e.target.closest('[data-close-modal]');
     if (close) {
-        document.getElementById(close.dataset.closeModal)?.classList.remove('open');
+        const modalEl = document.getElementById(close.dataset.closeModal);
+        if (modalEl) {
+            modalEl.classList.remove('open');
+            if (!document.querySelector('.backdrop.open, .modal.open')) {
+                document.body.classList.remove('is-locked');
+            }
+        }
         return;
     }
 
     if (e.target.classList.contains('backdrop')) {
         e.target.classList.remove('open');
+        if (!document.querySelector('.backdrop.open, .modal.open')) {
+            document.body.classList.remove('is-locked');
+        }
     }
 });
 
 document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
-    document.querySelectorAll('.backdrop.open').forEach((b) => b.classList.remove('open'));
+    document.querySelectorAll('.backdrop.open, .modal.open').forEach((b) => {
+        b.classList.remove('open');
+    });
+    document.body.classList.remove('is-locked');
 });
+
+function showErrorModal(message, title = 'Transaction Error') {
+    const errorModal = document.getElementById('orderErrorModal');
+    const titleEl = document.getElementById('orderErrorTitle');
+    const textEl = document.getElementById('orderErrorText');
+
+    if (titleEl) titleEl.textContent = title;
+    if (textEl) textEl.textContent = message;
+
+    if (errorModal) {
+        errorModal.classList.add('open');
+        document.body.classList.add('is-locked');
+    }
+}
 
 /**
  * Initialize Staff Inventory Module
@@ -236,11 +262,21 @@ function initStaffInventory() {
 
     const modal = document.getElementById('staffActionModal');
     document.getElementById('btnOpenActionModal')?.addEventListener('click', () => {
-        modal?.classList.add('open');
+        if (modal) {
+            modal.classList.add('open');
+            document.body.classList.add('is-locked');
+        }
         updateModalUnits();
     });
-    document.getElementById('btnCloseModal')?.addEventListener('click', () => modal?.classList.remove('open'));
-    document.getElementById('btnCancelModal')?.addEventListener('click', () => modal?.classList.remove('open'));
+    
+    const closeModalFunc = () => {
+        if (modal) {
+            modal.classList.remove('open');
+            document.body.classList.remove('is-locked');
+        }
+    };
+    document.getElementById('btnCloseModal')?.addEventListener('click', closeModalFunc);
+    document.getElementById('btnCancelModal')?.addEventListener('click', closeModalFunc);
 
     const tabRunningLow = document.getElementById('tabRunningLow');
     const tabAllItems = document.getElementById('tabAllItems');
@@ -387,12 +423,25 @@ function initStaffOrder() {
         if ($('tCold'))$('tCold').checked = true;
 
         $('mAddonsWrapper').hidden = !addons.length;
-        $('mAddonsHead').textContent = /coffee/i.test(item.type) ? 'Coffee add-ons' : (/soda/i.test(item.type) ? 'Soda add-ons' : 'Add-ons');$('mAddons').innerHTML = addons.map((a) =>
-            `<label class="opt"><input type="checkbox" value="${a.id}"> ${esc(a.name)}<span>+${peso(a.price)}</span></label>`
-        ).join('');
+        $('mAddonsHead').textContent = /coffee/i.test(item.type) ? 'Coffee add-ons' : (/soda/i.test(item.type) ? 'Soda add-ons' : 'Add-ons');$('mAddons').innerHTML = addons.map((a) => {
+            const isDisabled = a.is_disabled;
+            const disAttr = isDisabled ? 'disabled' : '';
+            const disLabel = isDisabled ? ' <small style="color: var(--flag, #a63d2a);">(Unavailable)</small>' : '';
+            const style = isDisabled ? 'style="opacity: 0.55; cursor: not-allowed;"' : '';
+
+            return `<label class="opt" ${style}>
+                <input type="checkbox" value="${a.id}" ${disAttr}> ${esc(a.name)}${disLabel}
+                <span>+${peso(a.price)}</span>
+            </label>`;
+        }).join('');
 
         refreshPrice();
-        $('addonModal').classList.add('open');$('mAdd').focus();
+        const modal = $('addonModal');
+        if (modal) {
+            modal.classList.add('open');
+            document.body.classList.add('is-locked');
+        }
+        $('mAdd').focus();
     }
 
     function selection() {
@@ -414,7 +463,11 @@ function initStaffOrder() {
     $('mAdd').onclick = () => {
         const s = selection();
         addLine(picking, s.size, s.temp, s.addons);
-        $('addonModal').classList.remove('open');
+        const modal = $('addonModal');
+        if (modal) {
+            modal.classList.remove('open');
+            document.body.classList.remove('is-locked');
+        }
     };
 
     function addLine(item, size, temp, addons) {
@@ -446,7 +499,6 @@ function initStaffOrder() {
         const changeLabel = $('cashChange');
         const gcashRefInput = $('gcashRef');
         const completeBtn = $('complete');
-        const msg = $('msg');
 
         const payMethod = document.querySelector('input[name="pay"]:checked')?.value || 'cash';
 
@@ -476,10 +528,6 @@ function initStaffOrder() {
             changeLabel.textContent = '₱0.00 (Exact)';
             changeLabel.style.color = 'inherit';
             if (completeBtn && cart.length > 0) completeBtn.disabled = false;
-            if (msg && msg.classList.contains('err')) {
-                msg.textContent = '';
-                msg.className = 'msg';
-            }
             return;
         }
 
@@ -489,18 +537,10 @@ function initStaffOrder() {
             changeLabel.textContent = peso(change);
             changeLabel.style.color = '#2e7d32'; 
             if (completeBtn && cart.length > 0) completeBtn.disabled = false;
-            if (msg && msg.classList.contains('err')) {
-                msg.textContent = '';
-                msg.className = 'msg';
-            }
         } else {
             changeLabel.textContent = `Short by ${peso(Math.abs(change))}`;
             changeLabel.style.color = '#d32f2f';
             if (completeBtn) completeBtn.disabled = true;
-            if (msg) {
-                msg.className = 'msg err';
-                msg.textContent = 'Cash tendered is less than total amount.';
-            }
         }
     }
 
@@ -547,106 +587,150 @@ function initStaffOrder() {
         };
     }
 
+    // FIXED: Correct splice and quantity logic
     $('lines').onclick = (e) => {
         const b = e.target.closest('button');
         if (!b) return;
         const i = +b.dataset.i;
         if (b.dataset.a === 'inc') cart[i].qty++;
-        if (b.dataset.a === 'dec') cart[i].qty > 1 ? cart[i].qty-- : cart[i].splice(i, 1);
-        if (b.dataset.a === 'rm') cart.splice(i, 1);
+        if (b.dataset.a === 'dec') {
+            if (cart[i].qty > 1) {
+                cart[i].qty--;
+            } else {
+                cart.splice(i, 1);
+            }
+        }
+        if (b.dataset.a === 'rm') {
+            cart.splice(i, 1);
+        }
         renderCart();
     };
 
-    $('complete').onclick = async () => {
-        const msg = $('msg');
-        msg.className = 'msg';
-        msg.textContent = '';
-        $('complete').disabled = true;
+    // --- CONFIRMATION DIALOGUE FLOW ---
+    const confirmModal = $('confirmOrderModal');
+    const btnCancelConfirm = $('btnCancelOrderConfirm');
+    const btnSubmitConfirm = $('btnSubmitOrderConfirm');
 
+    if (btnCancelConfirm) {
+        btnCancelConfirm.onclick = () => {
+            if (confirmModal) {
+                confirmModal.classList.remove('open');
+                document.body.classList.remove('is-locked');
+            }
+        };
+    }
+
+    $('complete').onclick = () => {
         const paymentMethod = document.querySelector('input[name=pay]:checked').value;
         const gcashRef = $('gcashRef')?.value.trim();
 
         if (paymentMethod === 'gcash' && !gcashRef) {
-            msg.className = 'msg err';
-            msg.textContent = 'Please enter the GCash reference number.';
-            $('complete').disabled = false;
+            showErrorModal('Please enter the GCash reference number.', 'Missing Information');
             return;
         }
 
-        try {
-            const res = await fetch(data.storeUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
-                },
-                body: JSON.stringify({
-                    payment: paymentMethod,
-                    gcash_ref: paymentMethod === 'gcash' ? gcashRef : null,
-                    items: cart.map((l) => ({
-                        id: l.id,
-                        qty: l.qty,
-                        size: l.size,
-                        temp: l.temp,
-                        addons: l.addons.map((a) => a.id),
-                    })),
-                }),
-            });
+        const total = cart.reduce((s, l) => s + unit(l) * l.qty, 0);
+        if ($('confirmModalTotal'))$('confirmModalTotal').textContent = peso(total);
+        if ($('confirmModalPayType'))$('confirmModalPayType').textContent = `Payment via ${paymentMethod}`;
 
-            const result = await res.json();
-            if (!res.ok) throw new Error(result.errors?.items?.[0] || result.message || 'Could not save the order.');
-
-            msg.className = 'msg ok';
-            msg.textContent = `Order ${result.order_no} saved · ${peso(result.total)}`;
-            $('orderNo').textContent = result.next_no;
-
-            // --- POPULATE & SHOW STYLED RECEIPT MODAL ---
-            if ($('rcptOrderNo'))$('rcptOrderNo').textContent = result.order_no;
-            if ($('rcptPayMethod'))$('rcptPayMethod').textContent = paymentMethod.toUpperCase();
-            if ($('rcptDate'))$('rcptDate').textContent = new Date().toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' });
-            if ($('rcptMeta'))$('rcptMeta').textContent = `Transaction Completed Successfully`;
-            if ($('rcptTotal'))$('rcptTotal').textContent = peso(result.total);
-
-            if ($('rcptItems')) {$('rcptItems').innerHTML = cart.map(l => {
-                    const addText = l.addons.length ? `<br><small style="color:#666; padding-left:8px;">+ ${l.addons.map(a => a.name).join(', ')}</small>` : '';
-                    const sizeTemp = [l.sizeLabel, l.temp].filter(Boolean).join(' · ');
-                    const subText = sizeTemp ? `<br><small style="color:#666; padding-left:8px;">${subTextFormat(sizeTemp)}</small>` : '';
-                    
-                    return `
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-                            <span>${l.qty}x ${esc(l.name)}${subText}${addText}</span>
-                            <span>${peso(unit(l) * l.qty)}</span>
-                        </div>
-                    `;
-                }).join('');
-            }
-
-            const tendered = parseFloat($('cashTendered')?.value) || 0;
-            if ($('rcptCashRow')) {
-                if (paymentMethod === 'cash' && tendered > 0) {
-                    $('rcptCashRow').hidden = false;
-                    if ($('rcptChange'))$('rcptChange').textContent = `${peso(tendered)} / ${peso(tendered - result.total)}`;
-                } else {
-                    $('rcptCashRow').hidden = true;
-                }
-            }
-
-            // Open Receipt Modal
-            const receiptModal = $('receiptModal');
-            if (receiptModal) receiptModal.classList.add('open');
-
-            cart = [];
-            if ($('cashTendered'))$('cashTendered').value = '';
-            if ($('gcashRef'))$('gcashRef').value = '';
-            renderCart();
-
-        } catch (err) {
-            msg.className = 'msg err';
-            msg.textContent = err.message;
-            $('complete').disabled = !cart.length;
+        if (confirmModal) {
+            confirmModal.classList.add('open');
+            document.body.classList.add('is-locked');
         }
     };
+
+    if (btnSubmitConfirm) {
+        btnSubmitConfirm.onclick = async () => {
+            if (confirmModal) {
+                confirmModal.classList.remove('open');
+                document.body.classList.remove('is-locked');
+            }
+            
+            $('complete').disabled = true;
+
+            const paymentMethod = document.querySelector('input[name=pay]:checked').value;
+            const gcashRef = $('gcashRef')?.value.trim();
+
+            try {
+                const res = await fetch(data.storeUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+                    },
+                    body: JSON.stringify({
+                        payment: paymentMethod,
+                        gcash_ref: paymentMethod === 'gcash' ? gcashRef : null,
+                        items: cart.map((l) => ({
+                            id: l.id,
+                            qty: l.qty,
+                            size: l.size,
+                            temp: l.temp,
+                            addons: l.addons.map((a) => a.id),
+                        })),
+                    }),
+                });
+
+                const result = await res.json();
+                
+                if (!res.ok) {
+                    const errText = result.errors?.items?.[0] || result.message || 'Could not complete the order.';
+                    throw new Error(errText);
+                }
+
+                if ($('orderNo'))$('orderNo').textContent = result.next_no;
+
+                // --- POPULATE UNIFIED RECEIPT MODAL ---
+                if ($('rcptOrderNo'))$('rcptOrderNo').textContent = result.order_no;
+                if ($('rcptPayMethod'))$('rcptPayMethod').textContent = paymentMethod.toUpperCase();
+                if ($('rcptDate'))$('rcptDate').textContent = new Date().toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' });
+                if ($('rcptMeta'))$('rcptMeta').textContent = `Transaction Completed Successfully`;
+                if ($('rcptTotal'))$('rcptTotal').textContent = peso(result.total);
+
+                if ($('rcptItems')) {$('rcptItems').innerHTML = cart.map(l => {
+                        const addText = l.addons.length ? `<br><small style="color:#666; padding-left:8px;">+ ${l.addons.map(a => a.name).join(', ')}</small>` : '';
+                        const sizeTemp = [l.sizeLabel, l.temp].filter(Boolean).join(' · ');
+                        const subText = sizeTemp ? `<br><small style="color:#666; padding-left:8px;">${subTextFormat(sizeTemp)}</small>` : '';
+                        
+                        return `
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                                <span>${l.qty}x ${esc(l.name)}${subText}${addText}</span>
+                                <span>${peso(unit(l) * l.qty)}</span>
+                            </div>
+                        `;
+                    }).join('');
+                }
+
+                const tendered = parseFloat($('cashTendered')?.value) || 0;
+                if ($('rcptCashRow')) {
+                    if (paymentMethod === 'cash' && tendered > 0) {
+                        $('rcptCashRow').hidden = false;
+                        if ($('rcptChange'))$('rcptChange').textContent = `${peso(tendered)} / ${peso(tendered - result.total)}`;
+                    } else {
+                        $('rcptCashRow').hidden = true;
+                    }
+                }
+
+                // Show Receipt Modal
+                const receiptModal = $('receiptModal');
+                if (receiptModal) {
+                    receiptModal.classList.add('open');
+                    document.body.classList.add('is-locked');
+                }
+
+                // Clear cart state
+                cart = [];
+                if ($('cashTendered'))$('cashTendered').value = '';
+                if ($('gcashRef'))$('gcashRef').value = '';
+                renderCart();
+
+            } catch (err) {
+                showErrorModal(err.message, 'Order Failed');
+                $('complete').disabled = !cart.length;
+            }
+        };
+    }
 
     // Bind Print Button Click
     const printBtn = $('btnPrintReceipt');

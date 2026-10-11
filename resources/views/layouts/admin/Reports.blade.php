@@ -191,7 +191,7 @@
             </article>
         </div>
 
-        <!-- Hidden by default unless low stock exists -->
+        <!-- Low Stock Attention Table (With Added Pagination) -->
         <div id="panelItemsNeedingAttention" hidden>
             <x-admin.panel title="Items needing attention" note="Ingredients at or below reorder threshold">
                 <table class="table">
@@ -206,6 +206,15 @@
                     </thead>
                     <tbody id="tableItemsNeedingAttention"></tbody>
                 </table>
+
+                <!-- Attention Items Pagination Controls -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 8px; border-top: 1px solid var(--border-color, #e5e7eb);">
+                    <span id="attentionPageInfo" style="font-size: 13px; color: #6b7280;">Showing low stock items</span>
+                    <div style="display: flex; gap: 6px;">
+                        <button type="button" class="btn btn--sm" id="btnAttentionPrev" style="padding: 4px 10px;">&larr; Prev</button>
+                        <button type="button" class="btn btn--sm" id="btnAttentionNext" style="padding: 4px 10px;">Next &rarr;</button>
+                    </div>
+                </div>
             </x-admin.panel>
         </div>
 

@@ -31,32 +31,32 @@ class DatabaseSeeder extends Seeder
     ];
 
     private const INGREDIENTS = [
-        'beans'       => ['Espresso beans',    'weight', 'g',  120000, 1500, 1.20],
-        'milk'        => ['Fresh milk',        'volume', 'ml', 500000, 5000, 0.09],
-        'caramel'     => ['Caramel syrup',     'volume', 'ml', 80000,  600,  0.35],
-        'vanilla'     => ['Vanilla syrup',     'volume', 'ml', 80000,  600,  0.35],
-        'hazelnut'    => ['Hazelnut syrup',    'volume', 'ml', 50000,  600,  0.38],
-        'choco'       => ['Chocolate sauce',   'volume', 'ml', 90000,  700,  0.42],
-        'white_choco' => ['White Choco sauce',  'volume', 'ml', 60000,  500,  0.45],
-        'condensed'   => ['Condensed milk',    'volume', 'ml', 90000,  800,  0.28],
-        'matcha'      => ['Matcha powder',     'weight', 'g',  40000,  250,  4.50],
-        'cream'       => ['Whipping cream',    'weight', 'g',  80000,  900,  0.65],
-        'ice_cream'   => ['Vanilla Ice Cream', 'weight', 'g',  150000, 1500, 0.30],
-        'ice'         => ['Ice',               'weight', 'g',  500000, 6000, 0.02],
-        'cup16'       => ['Cups 16oz',         'count',  'pc', 15000,  200,  4.50],
-        'lid'         => ['Dome lids',         'count',  'pc', 15000,  200,  1.75],
-        'strawberry'  => ['Strawberry jam',    'weight', 'g',  60000,  500,  0.50],
-        'blueberry'   => ['Blueberry jam',     'weight', 'g',  60000,  500,  0.55],
-        'mango'       => ['Mango puree',       'weight', 'g',  60000,  500,  0.48],
-        'pistachio'   => ['Pistachio sauce',   'weight', 'g',  50000,  400,  0.85],
-        'biscoff'     => ['Biscoff spread',    'weight', 'g',  40000,  300,  0.90],
-        'oreo'        => ['Oreo crumbs',       'weight', 'g',  50000,  400,  0.30],
-        'soda_base'   => ['Soda water',        'volume', 'ml', 150000, 2000, 0.05],
-        'lychee_syp'  => ['Lychee syrup',      'volume', 'ml', 50000,  400,  0.32],
-        'passion_syp' => ['Passion fruit syp', 'volume', 'ml', 50000,  400,  0.32],
-        'apple_syp'   => ['Green Apple syp',   'volume', 'ml', 50000,  400,  0.32],
-        'boba'        => ['Popping Boba',      'weight', 'g',  50000,  500,  0.40],
-        'jelly'       => ['Rainbow Jelly',     'weight', 'g',  50000,  500,  0.38],
+        'beans'       => ['Espresso beans',    'weight', 'g',  50000,   1500, 1.20],
+        'milk'        => ['Fresh milk',        'volume', 'ml', 500000,  5000, 0.09],
+        'caramel'     => ['Caramel syrup',     'volume', 'ml', 25000,   600,  0.35],
+        'vanilla'     => ['Vanilla syrup',     'volume', 'ml', 20000,   600,  0.35],
+        'hazelnut'    => ['Hazelnut syrup',    'volume', 'ml', 15000,   600,  0.38],
+        'choco'       => ['Chocolate sauce',   'volume', 'ml', 30000,   700,  0.42],
+        'white_choco' => ['White Choco sauce',  'volume', 'ml', 18000,   500,  0.45],
+        'condensed'   => ['Condensed milk',    'volume', 'ml', 20000,   800,  0.28],
+        'matcha'      => ['Matcha powder',     'weight', 'g',  8000,    250,  4.50],
+        'cream'       => ['Whipping cream',    'weight', 'g',  25000,   900,  0.65],
+        'ice_cream'   => ['Vanilla Ice Cream', 'weight', 'g',  60000,   1500, 0.30],
+        'ice'         => ['Ice',               'weight', 'g',  150000,  6000, 0.02],
+        'cup16'       => ['Cups 16oz',         'count',  'pc', 8000,    200,  4.50],
+        'lid'         => ['Dome lids',         'count',  'pc', 8000,    200,  1.75],
+        'strawberry'  => ['Strawberry jam',    'weight', 'g',  12000,   500,  0.50],
+        'blueberry'   => ['Blueberry jam',     'weight', 'g',  12000,   500,  0.55],
+        'mango'       => ['Mango puree',       'weight', 'g',  3500,    500,  0.48],
+        'pistachio'   => ['Pistachio sauce',   'weight', 'g',  10000,   400,  0.85],
+        'biscoff'     => ['Biscoff spread',    'weight', 'g',  2000,    300,  0.90],
+        'oreo'        => ['Oreo crumbs',       'weight', 'g',  15000,   400,  0.30],
+        'soda_base'   => ['Soda water',        'volume', 'ml', 50000,   2000, 0.05],
+        'lychee_syp'  => ['Lychee syrup',      'volume', 'ml', 12000,   400,  0.32],
+        'passion_syp' => ['Passion fruit syp', 'volume', 'ml', 12000,   400,  0.32],
+        'apple_syp'   => ['Green Apple syp',   'volume', 'ml', 12000,   400,  0.32],
+        'boba'        => ['Popping Boba',      'weight', 'g',  15000,   500,  0.40],
+        'jelly'       => ['Rainbow Jelly',     'weight', 'g',  15000,   500,  0.38],
     ];
 
     private const MENU = [
@@ -201,13 +201,13 @@ class DatabaseSeeder extends Seeder
 
     private function users(array $branchIds): array
     {
-        User::updateOrCreate(['contact' => 'admin'], [
-            'name' => 'Admin User', 'username' => 'Admin',
+        User::updateOrCreate(['username' => 'Admin'], [
+            'name' => 'Admin User', 'contact' => 'admin',
             'password' => Hash::make('1234'), 'role' => 'admin', 'branch_id' => null,
         ]);
 
-        User::updateOrCreate(['contact' => 'staff'], [
-            'name' => 'Staff User', 'username' => 'Staff',
+        User::updateOrCreate(['username' => 'Staff'], [
+            'name' => 'Staff User', 'contact' => 'staff',
             'password' => Hash::make('1234'), 'role' => 'staff', 'branch_id' => $branchIds[self::BRANCHES[0]],
         ]);
 
@@ -216,8 +216,8 @@ class DatabaseSeeder extends Seeder
             foreach ($names as $name) {
                 $handle = strtolower(strtok($name, ' '));
 
-                $byBranch[$branch][] = User::updateOrCreate(['contact' => $handle], [
-                    'name' => $name, 'username' => ucfirst($handle),
+                $byBranch[$branch][] = User::updateOrCreate(['username' => ucfirst($handle)], [
+                    'name' => $name, 'contact' => $handle,
                     'password' => Hash::make('1234'), 'role' => 'staff', 'branch_id' => $branchIds[$branch],
                 ])->id;
             }
@@ -255,7 +255,7 @@ class DatabaseSeeder extends Seeder
 
     private function branchInventory(array $branchIds, array $ingredientIds): void
     {
-        $now = Carbon::now('Asia/Manila');
+        $nowPh = Carbon::now('Asia/Manila');
         foreach ($branchIds as $branchName => $branchId) {
             foreach (self::INGREDIENTS as $key => [$name, $unitType, $unit, $stock, $reorder, $cost]) {
                 DB::table('branch_inventory')->updateOrInsert(
@@ -267,8 +267,8 @@ class DatabaseSeeder extends Seeder
                         'stock'         => $stock,
                         'reorder_level' => $reorder,
                         'is_active'     => true,
-                        'updated_at'    => $now,
-                        'created_at'    => $now,
+                        'updated_at'    => $nowPh,
+                        'created_at'    => $nowPh,
                     ]
                 );
             }
@@ -299,6 +299,7 @@ class DatabaseSeeder extends Seeder
     private function addons(array $ingredientIds, array $drinkTypeIds): array
     {
         $out = [];
+        $nowPh = Carbon::now('Asia/Manila');
         foreach (self::ADDONS as $name => $price) {
             $id = $this->put('addons', ['name' => $name], ['price' => $price]);
             $out[$name] = ['id' => $id, 'price' => $price];
@@ -306,14 +307,13 @@ class DatabaseSeeder extends Seeder
             $this->recipe('addon_ingredient', 'addon_id', $id, self::ADDON_RECIPES[$name] ?? [], $ingredientIds);
 
             DB::table('addon_drink_type')->where('addon_id', $id)->delete();
-            $now = Carbon::now('Asia/Manila');
             foreach (self::ADDON_CATEGORIES[$name] ?? [] as $category) {
                 if (isset($drinkTypeIds[$category])) {
                     DB::table('addon_drink_type')->insert([
                         'addon_id'      => $id,
                         'drink_type_id' => $drinkTypeIds[$category],
-                        'created_at'    => $now,
-                        'updated_at'    => $now,
+                        'created_at'    => $nowPh,
+                        'updated_at'    => $nowPh,
                     ]);
                 }
             }
@@ -345,12 +345,13 @@ class DatabaseSeeder extends Seeder
         $plans = [];
         $nowPh = Carbon::now('Asia/Manila');
 
+        // Seeds 60 days of operations across branches
         foreach ($branchIds as $branch => $branchId) {
             $staff = $staffByBranch[$branch] ?? [];
             if (!$staff) continue;
 
-            for ($ago = 6; $ago >= 0; $ago--) {
-                $perDay = rand(6, 12);
+            for ($ago = 60; $ago >= 0; $ago--) {
+                $perDay = rand(3, 6);
 
                 for ($n = 0; $n < $perDay; $n++) {
                     if ($ago === 0) {
@@ -400,7 +401,7 @@ class DatabaseSeeder extends Seeder
             $branchId = $plan['branch'];
 
             $orderId = DB::table('orders')->insertGetId([
-                'order_no'       => str_pad((string) ($i + 1), 4, '0', STR_PAD_LEFT),
+                'order_no'       => str_pad((string) ($i + 1), 6, '0', STR_PAD_LEFT),
                 'user_id'        => $plan['user'],
                 'branch_id'      => $branchId,
                 'payment_method' => $plan['payment'],
@@ -466,33 +467,93 @@ class DatabaseSeeder extends Seeder
                 }
             }
         }
+
+        // Seed manual operational stock restocks in PH time so inventory remains healthy
+        $branchList = array_values($branchIds);
+        foreach ($ingredientKeyToId as $ingKey => $ingId) {
+            foreach ($branchList as $bId) {
+                for ($monthAgo = 0; $monthAgo < 2; $monthAgo++) {
+                    $restockDate = $nowPh->copy()->subMonths($monthAgo)->subDays(rand(1, 25));
+
+                    $dummyOrderId = DB::table('orders')->insertGetId([
+                        'order_no'       => 'M-' . rand(100000, 999999),
+                        'user_id'        => $plans[0]['user'] ?? 1,
+                        'branch_id'      => $bId,
+                        'payment_method' => 'cash',
+                        'status'         => 'completed',
+                        'created_at'     => $restockDate,
+                        'updated_at'     => $restockDate,
+                    ]);
+
+                    $restockAmount = rand(5000, 20000);
+
+                    // Add restock log
+                    DB::table('stock_movements')->insert([
+                        'ingredient_id' => $ingId,
+                        'order_id'      => $dummyOrderId,
+                        'change'        => $restockAmount,
+                        'reason'        => 'restock',
+                        'created_at'    => $restockDate,
+                        'updated_at'    => $restockDate,
+                    ]);
+
+                    // Increase branch inventory with the restock
+                    DB::table('branch_inventory')
+                        ->where('branch_id', $bId)
+                        ->where('ingredient_id', $ingId)
+                        ->increment('stock', $restockAmount);
+
+                    if (rand(0, 1) === 1) {
+                        $wasteDate = $nowPh->copy()->subMonths($monthAgo)->subDays(rand(1, 25));
+                        $dummyWasteOrderId = DB::table('orders')->insertGetId([
+                            'order_no'       => 'W-' . rand(100000, 999999),
+                            'user_id'        => $plans[0]['user'] ?? 1,
+                            'branch_id'      => $bId,
+                            'payment_method' => 'cash',
+                            'status'         => 'completed',
+                            'created_at'     => $wasteDate,
+                            'updated_at'     => $wasteDate,
+                        ]);
+
+                        DB::table('stock_movements')->insert([
+                            'ingredient_id' => $ingId,
+                            'order_id'      => $dummyWasteOrderId,
+                            'change'        => -rand(50, 300),
+                            'reason'        => 'spoilage',
+                            'created_at'    => $wasteDate,
+                            'updated_at'    => $wasteDate,
+                        ]);
+                    }
+                }
+            }
+        }
     }
 
     private function put(string $table, array $match, array $values = []): int
     {
-        $now = Carbon::now('Asia/Manila');
+        $nowPh = Carbon::now('Asia/Manila');
         $row = DB::table($table)->where($match)->first();
 
         if ($row) {
-            DB::table($table)->where('id', $row->id)->update($values + ['updated_at' => $now]);
+            DB::table($table)->where('id', $row->id)->update($values + ['updated_at' => $nowPh]);
             return $row->id;
         }
 
-        return DB::table($table)->insertGetId($match + $values + ['created_at' => $now, 'updated_at' => $now]);
+        return DB::table($table)->insertGetId($match + $values + ['created_at' => $nowPh, 'updated_at' => $nowPh]);
     }
 
     private function recipe(string $table, string $ownerCol, int $ownerId, array $recipe, array $ingredientIds): void
     {
         DB::table($table)->where($ownerCol, $ownerId)->delete();
 
-        $now = Carbon::now('Asia/Manila');
+        $nowPh = Carbon::now('Asia/Manila');
         DB::table($table)->insert(
             collect($recipe)->map(fn ($qty, $key) => [
                 $ownerCol       => $ownerId,
                 'ingredient_id' => $ingredientIds[$key],
                 'quantity'      => $qty,
-                'created_at'    => $now,
-                'updated_at'    => $now,
+                'created_at'    => $nowPh,
+                'updated_at'    => $nowPh,
             ])->values()->all()
         );
     }
