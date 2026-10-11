@@ -116,7 +116,7 @@ class StaffController extends Controller
                 ];
             });
 
-        return view('layouts.staff.order', [
+        return view('layouts.staff.Order', [
             'menu'   => $menu,
             'addons' => $addons,
             'nextNo' => $this->nextOrderNo(),
