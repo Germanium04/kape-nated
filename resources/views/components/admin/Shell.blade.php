@@ -16,6 +16,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700&family=Karla:wght@400;500;600;700&display=swap" rel="stylesheet">
 
     <link rel="stylesheet" href="{{ asset('style/Admin.css') }}">
+    <link rel="stylesheet" href="{{ asset('style/Authenticate.css') }}">
+    <link rel="stylesheet" href="{{ asset('style/Align.css') }}">
 </head>
 <body>
 
@@ -39,7 +41,6 @@
         </button>
 
         {{--
-
                 @if(Route::has('profile.edit'))
                     <a href="{{ route('profile.edit') }}" class="user-dropdown-item">Profile</a>
                 @endif
@@ -50,7 +51,10 @@
             </div>
 
             <button type="button" class="user-dropdown-item" id="profilePlaceholder">Profile</button>
-            <form method="POST" action="{{ route('authentication.logout') }}">
+            <form method="POST" action="{{ route('authentication.logout') }}"
+                  data-confirm="You'll need to log in again to get back in."
+                  data-confirm-title="Log out?"
+                  data-confirm-ok="Log out">
                 @csrf
                 <button type="submit" class="user-dropdown-item user-dropdown-item--danger">Log out</button>
             </form>
@@ -60,10 +64,18 @@
 
 <main class="page">
     <div class="page-head">
-        <h1>{{ $heading ?? $title }}</h1>
-        @if($subheading)
-            <p class="page-sub">{{ $subheading }}</p>
-        @endif
+        <div class="page-head-text">
+            <h1>{{ $heading ?? $title }}</h1>
+            @if($subheading)
+                <p class="page-sub">{{ $subheading }}</p>
+            @endif
+        </div>
+
+        {{-- Pages pass <x-slot:headerActions>; the old shell only looked for $actions,
+             so the Inventory branch picker never rendered. Both names work now. --}}
+        @isset($headerActions)
+            <div class="page-actions">{{ $headerActions }}</div>
+        @endisset
         @isset($actions)
             <div class="page-actions">{{ $actions }}</div>
         @endisset
@@ -72,6 +84,9 @@
     {{ $slot }}
 </main>
 
+
+@include('layouts.authentication.Ui-feedback')
+<script src="{{ asset('js/Authenticate.js') }}"></script>
 <script src="{{ asset('js/admin.js') }}"></script>
 @stack('scripts')
 </body>

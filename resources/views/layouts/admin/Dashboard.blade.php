@@ -5,11 +5,15 @@
     $ordersToday = count($today);
     $avgTicket   = $ordersToday > 0 ? $salesToday / $ordersToday : 0;
 
-    $lowStock = array_values(array_filter($ingredients, fn ($i) => $i['stock'] <= $i['reorder']));
+    // Same rule as Inventory + Reports: one row per branch & ingredient, low when stock <= that branch's reorder level.
+    $lowStock = array_values(array_filter($ingredients, fn ($i) => ($i['is_active'] ?? true) && $i['stock'] <= $i['reorder']));
+    usort($lowStock, fn ($a, $b) => ($a['stock'] / max($a['reorder'], 1)) <=> ($b['stock'] / max($b['reorder'], 1)));
+    $lowShown = array_slice($lowStock, 0, 8);
+    $greeting = now()->hour < 12 ? 'Good morning' : (now()->hour < 18 ? 'Good afternoon' : 'Good evening');
     $week     = array_sum(array_map(fn ($d) => $d['cash'] + $d['gcash'], $sales));
 @endphp
 
-<x-admin.shell title="Dashboard" heading="Good afternoon, Boss" subheading="Friday, 19 September 2026 · store open since 7:00 AM">
+<x-admin.shell title="Dashboard" heading="{{ $greeting }}, Boss" subheading="{{ now()->format('l, j F Y') }}">
 
     <div class="stat-row">
         <x-admin.stat label="Sales today"   value="₱{{ number_format($salesToday, 2) }}" trend="+14% vs yesterday" tone="up" />
@@ -21,12 +25,12 @@
     @if($lowStock)
         <x-admin.panel tone="warning" title="Running low" note="Based on what's left after today's orders">
             <ul class="alert-list">
-                @foreach($lowStock as $item)
+                @foreach($lowShown as $item)
                     @php $daysLeft = $item['used_today'] > 0 ? floor($item['stock'] / $item['used_today']) : null; @endphp
                     <li>
-                        <span class="alert-name">{{ $item['name'] }}</span>
+                        <span class="alert-name">{{ $item['name'] }} <span class="muted">· {{ $item['branch_name'] }}</span></span>
                         <span class="alert-figure">{{ number_format($item['stock']) }}{{ $item['unit'] }} left, reorder at {{ number_format($item['reorder']) }}{{ $item['unit'] }}</span>
-                        <x-admin.badge :tone="$item['stock'] == 0 ? 'out' : 'low'">
+                        <x-admin.badge :tone="$item['stock'] <= 0 ? 'out' : 'low'">
                             @if($daysLeft === null) No usage yet
                             @elseif($daysLeft < 1) Runs out today
                             @else About {{ $daysLeft }} {{ $daysLeft == 1 ? 'day' : 'days' }} left
@@ -35,6 +39,9 @@
                     </li>
                 @endforeach
             </ul>
+            @if(count($lowStock) > count($lowShown))
+                <p class="muted" style="margin: 8px 0 12px;">+ {{ count($lowStock) - count($lowShown) }} more below reorder level</p>
+            @endif
             <a href="{{ route('admin.inventory') }}" class="btn btn--primary">Open inventory</a>
         </x-admin.panel>
     @endif

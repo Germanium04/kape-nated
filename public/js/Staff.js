@@ -1,5 +1,5 @@
 /* ==========================================================================
-   kape-nated — STAFF JavaScript Asset (POS & Inventory)
+   kape-nated — STAFF JavaScript Asset (POS, Inventory & Receipts)
    ========================================================================== */
 
 document.addEventListener('click', (e) => {
@@ -31,10 +31,10 @@ document.addEventListener('keydown', (e) => {
     document.body.classList.remove('is-locked');
 });
 
-function showErrorModal(message, title = 'Transaction Error') {
-    const errorModal = document.getElementById('orderErrorModal');
-    const titleEl = document.getElementById('orderErrorTitle');
-    const textEl = document.getElementById('orderErrorText');
+function showErrorModal(message, title = 'Transaction Error', modalId = 'orderErrorModal') {
+    const errorModal = document.getElementById(modalId);
+    const titleEl = modalId === 'staffErrorModal' ? document.getElementById('staffErrorTitle') : document.getElementById('orderErrorTitle');
+    const textEl = modalId === 'staffErrorModal' ? document.getElementById('staffErrorText') : document.getElementById('orderErrorText');
 
     if (titleEl) titleEl.textContent = title;
     if (textEl) textEl.textContent = message;
@@ -43,6 +43,21 @@ function showErrorModal(message, title = 'Transaction Error') {
         errorModal.classList.add('open');
         document.body.classList.add('is-locked');
     }
+}
+
+function showModalNotice(msg, isErr = true) {
+    const notice = document.getElementById('staffModalNotice');
+    if (!notice) return;
+    notice.textContent = msg;
+    notice.style.background = isErr ? 'var(--flag-pale)' : 'var(--good-pale)';
+    notice.style.color = isErr ? 'var(--flag-dark)' : 'var(--good-dark)';
+    notice.style.border = isErr ? '1px solid var(--flag)' : '1px solid var(--good)';
+    notice.style.display = 'block';
+}
+
+function clearModalNotice() {
+    const notice = document.getElementById('staffModalNotice');
+    if (notice) notice.style.display = 'none';
 }
 
 /**
@@ -71,9 +86,11 @@ function initStaffInventory() {
     const unitSelectGroup = document.getElementById('unitSelectGroup');
     const reasonGroup = document.getElementById('staffReasonGroup');
     const submitBtn = document.getElementById('btnSubmitAction');
+    const qtyInput = document.getElementById('staffQtyInput');
 
     function updateModalUnits() {
         if (!ingSelect) return;
+        clearModalNotice();
         const selectedOption = ingSelect.options[ingSelect.selectedIndex];
         const baseUnit = selectedOption?.dataset.unit || 'ml';
         const isOut = actionTypeSelect?.value === 'stock_out';
@@ -118,8 +135,121 @@ function initStaffInventory() {
     ingSelect?.addEventListener('change', updateModalUnits);
     actionTypeSelect?.addEventListener('change', updateModalUnits);
 
+    submitBtn?.addEventListener('click', () => {
+        clearModalNotice();
+
+        const isOut = actionTypeSelect?.value === 'stock_out';
+        const selectedOpt = ingSelect?.options[ingSelect.selectedIndex];
+        if (!selectedOpt) {
+            showModalNotice('Please select a valid ingredient.');
+            return;
+        }
+
+        const ingName = selectedOpt.text.split(' (Available:')[0].trim();
+        const availableStock = parseFloat(selectedOpt.dataset.stock || '0');
+        const baseUnit = selectedOpt.dataset.unit || '';
+        const isDisabled = selectedOpt.dataset.disabled === '1';
+        const inputQty = parseFloat(qtyInput?.value || '0');
+
+        if (isDisabled) {
+            showModalNotice(`Cannot perform stock operation: '${ingName}' has been disabled by Admin.`);
+            return;
+        }
+
+        if (isNaN(inputQty) || inputQty <= 0) {
+            showModalNotice('Please enter a valid positive quantity.');
+            qtyInput?.focus();
+            return;
+        }
+
+        if (isOut) {
+            if (availableStock <= 0) {
+                showModalNotice(`Cannot perform stock-out: '${ingName}' is currently out of stock (0 ${baseUnit}).`);
+                return;
+            }
+
+            if (inputQty > availableStock) {
+                const formattedAvail = availableStock.toLocaleString('en-PH');
+                showModalNotice(`Cannot deduct ${inputQty} ${baseUnit}. Only ${formattedAvail} ${baseUnit} available.`);
+                qtyInput?.focus();
+                return;
+            }
+        }
+
+        const actionText = isOut ? 'Stock Deduction (Stock-Out)' : 'Stock Replenishment (Stock-In)';
+        const unitMultiplier = isOut ? 1 : (parseFloat(unitMultiplierSelect?.value) || 1);
+        const totalBaseQty = inputQty * unitMultiplier;
+        const totalDisplay = `${totalBaseQty.toLocaleString('en-PH')} ${baseUnit}`;
+
+        const summaryEl = document.getElementById('confirmActionSummary');
+        const detailEl = document.getElementById('confirmActionDetail');
+
+        if (summaryEl) summaryEl.textContent = `${actionText}: ${ingName}`;
+        if (detailEl) detailEl.textContent = `Quantity: ${inputQty} input unit(s) → Net Change: ${isOut ? '-' : '+'}${totalDisplay}`;
+
+        const confirmModal = document.getElementById('confirmActionModal');
+        if (confirmModal) {
+            confirmModal.classList.add('open');
+            document.body.classList.add('is-locked');
+        }
+    });
+
+    document.getElementById('btnProceedActionConfirm')?.addEventListener('click', async () => {
+        const confirmModal = document.getElementById('confirmActionModal');
+        const actionModal = document.getElementById('staffActionModal');
+        const form = document.getElementById('staffActionForm');
+
+        if (confirmModal) confirmModal.classList.remove('open');
+        if (!form) return;
+
+        const formData = new FormData(form);
+
+        try {
+            const res = await fetch(form.action, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                },
+                body: formData
+            });
+
+            const result = await res.json().catch(() => ({}));
+
+            if (!res.ok) {
+                const message = result.message || (result.errors ? Object.values(result.errors)[0][0] : 'Failed to perform stock action.');
+                showErrorModal(message, 'Action Failed', 'staffErrorModal');
+                return;
+            }
+
+            if (actionModal) actionModal.classList.remove('open');
+
+            const successModal = document.getElementById('staffSuccessModal');
+            const successText = document.getElementById('staffSuccessText');
+            if (successText) successText.textContent = result.message || 'Inventory changes updated successfully.';
+
+            if (successModal) {
+                successModal.classList.add('open');
+                document.body.classList.add('is-locked');
+            }
+
+        } catch (err) {
+            showErrorModal('Network error or server connection failure.', 'Action Failed', 'staffErrorModal');
+        }
+    });
+
+    document.getElementById('btnCancelActionConfirm')?.addEventListener('click', () => {
+        const confirmModal = document.getElementById('confirmActionModal');
+        if (confirmModal) confirmModal.classList.remove('open');
+    });
+
+    document.getElementById('btnStaffSuccessDone')?.addEventListener('click', () => {
+        window.location.reload();
+    });
+
     function renderStats() {
         const value = ingredients.reduce((sum, i) => sum + Math.max(0, i.stock) * i.cost, 0);
+        // STOCK ALERT: Counts both low stock (stock <= reorder) AND out of stock (stock <= 0)
         const flagged = ingredients.filter((i) => i.stock <= i.reorder).length;
         const statsBox = document.getElementById('inventoryStats');
         const badge = document.getElementById('runningLowBadge');
@@ -137,10 +267,10 @@ function initStaffInventory() {
             <article class="stat ${flagged ? 'stat--alert' : 'stat--muted-alert'}" id="cardRunningLow" style="display: flex; flex-direction: column; justify-content: space-between; min-height: 100px; cursor: pointer; border-left: 5px solid var(--flag, #a63d2a);">
                 <p class="stat-label" style="display: flex; align-items: center; gap: 6px;">
                     ${flagged ? '<span style="color: var(--flag, #a63d2a);">⚠️</span>' : ''}
-                    <span>Items Running Low</span>
+                    <span>Stock Alert</span>
                 </p>
                 <p class="stat-value" style="text-align: right; color: ${flagged ? 'var(--flag, #a63d2a)' : 'inherit'};">${flagged} Items</p>
-                <p class="stat-trend">${flagged ? 'Needs immediate replenishment' : 'Stock room healthy'}</p>
+                <p class="stat-trend">${flagged ? 'Items low or out of stock' : 'Stock room healthy'}</p>
             </article>
 
             <article class="stat stat--up" id="cardTotalItems" style="display: flex; flex-direction: column; justify-content: space-between; min-height: 100px; cursor: pointer;">
@@ -151,7 +281,7 @@ function initStaffInventory() {
 
         document.getElementById('cardRunningLow')?.addEventListener('click', () => {
             const statusFilter = document.getElementById('stockStatusFilter');
-            if (statusFilter) statusFilter.value = 'low';
+            if (statusFilter) statusFilter.value = 'alert';
             currentPage = 1;
             renderTable();
         });
@@ -174,21 +304,25 @@ function initStaffInventory() {
         const filtered = ingredients.filter((i) => {
             const matchesSearch = !term || i.name.toLowerCase().includes(term);
             const matchesUnit = unitVal === 'all' || i.unit === unitVal;
-            const isLow = i.stock <= i.reorder;
+            
+            const isLow = i.stock > 0 && i.stock <= i.reorder;
             const isOut = i.stock <= 0;
+            const isAlert = i.stock <= i.reorder;
+            const isDisabled = Boolean(i.is_disabled);
             
             const matchesStatus = statusVal === 'all' ||
-                (statusVal === 'low' && isLow && !isOut) ||
-                (statusVal === 'healthy' && !isLow) ||
+                (statusVal === 'alert' && isAlert) ||
+                (statusVal === 'low' && isLow) ||
+                (statusVal === 'healthy' && !isAlert) ||
                 (statusVal === 'out' && isOut);
 
             let matchesAvail = true;
             if (availVal === 'available') {
-                matchesAvail = !i.is_disabled && i.stock > 0;
-            } else if (availVal === 'unavailable') {
-                matchesAvail = !i.is_disabled && i.stock <= 0;
+                matchesAvail = !isDisabled && i.stock > 0;
+            } else if (availVal === 'unavailable' || availVal === 'out') {
+                matchesAvail = !isDisabled && i.stock <= 0;
             } else if (availVal === 'disabled') {
-                matchesAvail = i.is_disabled;
+                matchesAvail = isDisabled;
             }
 
             return matchesSearch && matchesUnit && matchesStatus && matchesAvail;
@@ -284,26 +418,26 @@ function initStaffInventory() {
 
     tabRunningLow?.addEventListener('click', () => {
         tabRunningLow.style.fontWeight = '600';
-        tabRunningLow.style.borderBottom = '2px solid var(--primary, #a63d2a)';
-        tabRunningLow.style.color = 'var(--primary, #a63d2a)';
+        tabRunningLow.style.borderBottom = '2px solid var(--primary)';
+        tabRunningLow.style.color = 'var(--primary)';
         
         tabAllItems.style.fontWeight = '500';
         tabAllItems.style.borderBottom = '2px solid transparent';
-        tabAllItems.style.color = 'var(--muted, #666)';
+        tabAllItems.style.color = 'var(--muted)';
 
-        if (statusFilter) statusFilter.value = 'low';
+        if (statusFilter) statusFilter.value = 'alert';
         currentPage = 1;
         renderTable();
     });
 
     tabAllItems?.addEventListener('click', () => {
         tabAllItems.style.fontWeight = '600';
-        tabAllItems.style.borderBottom = '2px solid var(--primary, #a63d2a)';
-        tabAllItems.style.color = 'var(--primary, #a63d2a)';
+        tabAllItems.style.borderBottom = '2px solid var(--primary)';
+        tabAllItems.style.color = 'var(--primary)';
         
         tabRunningLow.style.fontWeight = '500';
         tabRunningLow.style.borderBottom = '2px solid transparent';
-        tabRunningLow.style.color = 'var(--muted, #666)';
+        tabRunningLow.style.color = 'var(--muted)';
 
         if (statusFilter) statusFilter.value = 'all';
         currentPage = 1;
@@ -348,13 +482,15 @@ function initStaffOrder() {
     const priceText = (m) => (m.sizes && m.sizes.length ? m.sizes.map((s) => short(s.price)).join('–') : short(m.price));
 
     const types = [...new Set(MENU.map((m) => m.type))];
-    $('type').innerHTML = ['All', ...types].map((t) => `<option>${esc(t)}</option>`).join('');
-    $('type').value = types.includes('Coffee') ? 'Coffee' : 'All';
+    if ($('type')) {$('type').innerHTML = ['All', ...types].map((t) => `<option>${esc(t)}</option>`).join('');
+        $('type').value = types.includes('Coffee') ? 'Coffee' : 'All';
+    }
 
     function renderGrid() {
-        const t = $('type').value;
+        if (!$('grid')) return;
+        const t = $('type')?.value || 'All';
         const avail = $('availabilityFilter')?.value || 'available';
-        const q = $('search').value.trim().toLowerCase();
+        const q = ($('search')?.value || '').trim().toLowerCase();
 
         const list = MENU.filter((m) => {
             const matchesType = (t === 'All' || m.type === t);
@@ -390,15 +526,16 @@ function initStaffOrder() {
             : '<div class="empty">No drinks match your filter.</div>';
     }
 
-    $('type').onchange = renderGrid;
-    $('search').oninput = renderGrid;
+    if ($('type'))$('type').onchange = renderGrid;
+    if ($('search'))$('search').oninput = renderGrid;
     $('availabilityFilter')?.addEventListener('change', renderGrid);
 
-    $('grid').onclick = (e) => {
-        const card = e.target.closest('.card');
-        if (!card || card.classList.contains('is-unavailable')) return;
-        openModal(MENU.find((m) => m.id == card.dataset.id));
-    };
+    if ($('grid')) {$('grid').onclick = (e) => {
+            const card = e.target.closest('.card');
+            if (!card || card.classList.contains('is-unavailable')) return;
+            openModal(MENU.find((m) => m.id == card.dataset.id));
+        };
+    }
 
     function openModal(item) {
         picking = item;
@@ -410,30 +547,34 @@ function initStaffOrder() {
             return;
         }
 
-        $('mTitle').textContent = item.name;
-        $('mType').textContent = sizes.length ? item.type : `${item.type} · ${short(item.price)}`;
+        if ($('mTitle'))$('mTitle').textContent = item.name;
+        if ($('mType'))$('mType').textContent = sizes.length ? item.type : `${item.type} · ${short(item.price)}`;
 
-        $('mSizeWrapper').hidden = !sizes.length;
-        $('mSizes').innerHTML = sizes.map((s, i) =>
-            `<input type="radio" name="size" id="size${i}" value="${s.value}"${i === 0 ? ' checked' : ''}>` +
-            `<label for="size${i}">${esc(s.label)} · ${short(s.price)}</label>`
-        ).join('');
+        if ($('mSizeWrapper'))$('mSizeWrapper').hidden = !sizes.length;
+        if ($('mSizes')) {$('mSizes').innerHTML = sizes.map((s, i) =>
+                `<input type="radio" name="size" id="size${i}" value="${s.value}"${i === 0 ? ' checked' : ''}>` +
+                `<label for="size${i}">${esc(s.label)} · ${short(s.price)}</label>`
+            ).join('');
+        }
 
-        $('mTempWrapper').hidden = !item.has_temperature;
+        if ($('mTempWrapper'))$('mTempWrapper').hidden = !item.has_temperature;
         if ($('tCold'))$('tCold').checked = true;
 
-        $('mAddonsWrapper').hidden = !addons.length;
-        $('mAddonsHead').textContent = /coffee/i.test(item.type) ? 'Coffee add-ons' : (/soda/i.test(item.type) ? 'Soda add-ons' : 'Add-ons');$('mAddons').innerHTML = addons.map((a) => {
-            const isDisabled = a.is_disabled;
-            const disAttr = isDisabled ? 'disabled' : '';
-            const disLabel = isDisabled ? ' <small style="color: var(--flag, #a63d2a);">(Unavailable)</small>' : '';
-            const style = isDisabled ? 'style="opacity: 0.55; cursor: not-allowed;"' : '';
+        if ($('mAddonsWrapper'))$('mAddonsWrapper').hidden = !addons.length;
+        if ($('mAddonsHead'))$('mAddonsHead').textContent = /coffee/i.test(item.type) ? 'Coffee add-ons' : (/soda/i.test(item.type) ? 'Soda add-ons' : 'Add-ons');
+        
+        if ($('mAddons')) {$('mAddons').innerHTML = addons.map((a) => {
+                const isDisabled = a.is_disabled;
+                const disAttr = isDisabled ? 'disabled' : '';
+                const disLabel = isDisabled ? ' <small style="color: var(--flag, #a63d2a);">(Unavailable)</small>' : '';
+                const style = isDisabled ? 'style="opacity: 0.55; cursor: not-allowed;"' : '';
 
-            return `<label class="opt" ${style}>
-                <input type="checkbox" value="${a.id}" ${disAttr}> ${esc(a.name)}${disLabel}
-                <span>+${peso(a.price)}</span>
-            </label>`;
-        }).join('');
+                return `<label class="opt" ${style}>
+                    <input type="checkbox" value="${a.id}" ${disAttr}> ${esc(a.name)}${disLabel}
+                    <span>+${peso(a.price)}</span>
+                </label>`;
+            }).join('');
+        }
 
         refreshPrice();
         const modal = $('addonModal');
@@ -441,7 +582,7 @@ function initStaffOrder() {
             modal.classList.add('open');
             document.body.classList.add('is-locked');
         }
-        $('mAdd').focus();
+        $('mAdd')?.focus();
     }
 
     function selection() {
@@ -449,26 +590,27 @@ function initStaffOrder() {
         const sizes = picking.sizes || [];
         const size = sizes.length ? (sizes.find((s) => s.value === sizeInput?.value) || sizes[0]) : null;
         const temp = picking.has_temperature ? (document.querySelector('#addonModal input[name=temp]:checked')?.value || 'cold') : null;
-        const addons = [...$('mAddons').querySelectorAll('input:checked')].map((c) => ADDONS.find((a) => a.id == c.value));
+        const addons = [...($('mAddons')?.querySelectorAll('input:checked') || [])].map((c) => ADDONS.find((a) => a.id == c.value));
 
         return { size, temp, addons, base: size ? size.price : picking.price };
     }
 
     function refreshPrice() {
         const s = selection();
-        $('mAdd').textContent = `Add to Order · ${peso(s.base + s.addons.reduce((t, a) => t + +a.price, 0))}`;
+        if ($('mAdd'))$('mAdd').textContent = `Add to Order · ${peso(s.base + s.addons.reduce((t, a) => t + +a.price, 0))}`;
     }
-    $('addonModal').addEventListener('change', refreshPrice);
+    $('addonModal')?.addEventListener('change', refreshPrice);
 
-    $('mAdd').onclick = () => {
-        const s = selection();
-        addLine(picking, s.size, s.temp, s.addons);
-        const modal = $('addonModal');
-        if (modal) {
-            modal.classList.remove('open');
-            document.body.classList.remove('is-locked');
-        }
-    };
+    if ($('mAdd')) {$('mAdd').onclick = () => {
+            const s = selection();
+            addLine(picking, s.size, s.temp, s.addons);
+            const modal = $('addonModal');
+            if (modal) {
+                modal.classList.remove('open');
+                document.body.classList.remove('is-locked');
+            }
+        };
+    }
 
     function addLine(item, size, temp, addons) {
         const line = {
@@ -535,16 +677,17 @@ function initStaffOrder() {
 
         if (change >= 0) {
             changeLabel.textContent = peso(change);
-            changeLabel.style.color = '#2e7d32'; 
+            changeLabel.style.color = 'var(--good)'; 
             if (completeBtn && cart.length > 0) completeBtn.disabled = false;
         } else {
             changeLabel.textContent = `Short by ${peso(Math.abs(change))}`;
-            changeLabel.style.color = '#d32f2f';
+            changeLabel.style.color = 'var(--flag)';
             if (completeBtn) completeBtn.disabled = true;
         }
     }
 
     function renderCart() {
+        if (!$('lines')) return;
         $('lines').innerHTML = cart.length
             ? cart.map((l, i) => {
                 const details = [];
@@ -569,7 +712,7 @@ function initStaffOrder() {
             : '<div class="hint">Tap menu item to add here</div>';
 
         const total = cart.reduce((s, l) => s + unit(l) * l.qty, 0);
-        $('total').textContent = peso(total);
+        if ($('total'))$('total').textContent = peso(total);
 
         updatePaymentAreas(total);
     }
@@ -587,26 +730,25 @@ function initStaffOrder() {
         };
     }
 
-    // FIXED: Correct splice and quantity logic
-    $('lines').onclick = (e) => {
-        const b = e.target.closest('button');
-        if (!b) return;
-        const i = +b.dataset.i;
-        if (b.dataset.a === 'inc') cart[i].qty++;
-        if (b.dataset.a === 'dec') {
-            if (cart[i].qty > 1) {
-                cart[i].qty--;
-            } else {
+    if ($('lines')) {$('lines').onclick = (e) => {
+            const b = e.target.closest('button');
+            if (!b) return;
+            const i = +b.dataset.i;
+            if (b.dataset.a === 'inc') cart[i].qty++;
+            if (b.dataset.a === 'dec') {
+                if (cart[i].qty > 1) {
+                    cart[i].qty--;
+                } else {
+                    cart.splice(i, 1);
+                }
+            }
+            if (b.dataset.a === 'rm') {
                 cart.splice(i, 1);
             }
-        }
-        if (b.dataset.a === 'rm') {
-            cart.splice(i, 1);
-        }
-        renderCart();
-    };
+            renderCart();
+        };
+    }
 
-    // --- CONFIRMATION DIALOGUE FLOW ---
     const confirmModal = $('confirmOrderModal');
     const btnCancelConfirm = $('btnCancelOrderConfirm');
     const btnSubmitConfirm = $('btnSubmitOrderConfirm');
@@ -620,24 +762,25 @@ function initStaffOrder() {
         };
     }
 
-    $('complete').onclick = () => {
-        const paymentMethod = document.querySelector('input[name=pay]:checked').value;
-        const gcashRef = $('gcashRef')?.value.trim();
+    if ($('complete')) {$('complete').onclick = () => {
+            const paymentMethod = document.querySelector('input[name=pay]:checked')?.value || 'cash';
+            const gcashRef = $('gcashRef')?.value.trim();
 
-        if (paymentMethod === 'gcash' && !gcashRef) {
-            showErrorModal('Please enter the GCash reference number.', 'Missing Information');
-            return;
-        }
+            if (paymentMethod === 'gcash' && !gcashRef) {
+                showErrorModal('Please enter the GCash reference number.', 'Missing Information');
+                return;
+            }
 
-        const total = cart.reduce((s, l) => s + unit(l) * l.qty, 0);
-        if ($('confirmModalTotal'))$('confirmModalTotal').textContent = peso(total);
-        if ($('confirmModalPayType'))$('confirmModalPayType').textContent = `Payment via ${paymentMethod}`;
+            const total = cart.reduce((s, l) => s + unit(l) * l.qty, 0);
+            if ($('confirmModalTotal'))$('confirmModalTotal').textContent = peso(total);
+            if ($('confirmModalPayType'))$('confirmModalPayType').textContent = `Payment via ${paymentMethod}`;
 
-        if (confirmModal) {
-            confirmModal.classList.add('open');
-            document.body.classList.add('is-locked');
-        }
-    };
+            if (confirmModal) {
+                confirmModal.classList.add('open');
+                document.body.classList.add('is-locked');
+            }
+        };
+    }
 
     if (btnSubmitConfirm) {
         btnSubmitConfirm.onclick = async () => {
@@ -646,9 +789,9 @@ function initStaffOrder() {
                 document.body.classList.remove('is-locked');
             }
             
-            $('complete').disabled = true;
+            if ($('complete'))$('complete').disabled = true;
 
-            const paymentMethod = document.querySelector('input[name=pay]:checked').value;
+            const paymentMethod = document.querySelector('input[name=pay]:checked')?.value || 'cash';
             const gcashRef = $('gcashRef')?.value.trim();
 
             try {
@@ -681,7 +824,6 @@ function initStaffOrder() {
 
                 if ($('orderNo'))$('orderNo').textContent = result.next_no;
 
-                // --- POPULATE UNIFIED RECEIPT MODAL ---
                 if ($('rcptOrderNo'))$('rcptOrderNo').textContent = result.order_no;
                 if ($('rcptPayMethod'))$('rcptPayMethod').textContent = paymentMethod.toUpperCase();
                 if ($('rcptDate'))$('rcptDate').textContent = new Date().toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' });
@@ -689,9 +831,9 @@ function initStaffOrder() {
                 if ($('rcptTotal'))$('rcptTotal').textContent = peso(result.total);
 
                 if ($('rcptItems')) {$('rcptItems').innerHTML = cart.map(l => {
-                        const addText = l.addons.length ? `<br><small style="color:#666; padding-left:8px;">+ ${l.addons.map(a => a.name).join(', ')}</small>` : '';
+                        const addText = l.addons.length ? `<br><small style="color:var(--ink-soft); padding-left:8px;">+ ${l.addons.map(a => a.name).join(', ')}</small>` : '';
                         const sizeTemp = [l.sizeLabel, l.temp].filter(Boolean).join(' · ');
-                        const subText = sizeTemp ? `<br><small style="color:#666; padding-left:8px;">${subTextFormat(sizeTemp)}</small>` : '';
+                        const subText = sizeTemp ? `<br><small style="color:var(--ink-soft); padding-left:8px;">${subTextFormat(sizeTemp)}</small>` : '';
                         
                         return `
                             <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
@@ -712,14 +854,12 @@ function initStaffOrder() {
                     }
                 }
 
-                // Show Receipt Modal
                 const receiptModal = $('receiptModal');
                 if (receiptModal) {
                     receiptModal.classList.add('open');
                     document.body.classList.add('is-locked');
                 }
 
-                // Clear cart state
                 cart = [];
                 if ($('cashTendered'))$('cashTendered').value = '';
                 if ($('gcashRef'))$('gcashRef').value = '';
@@ -727,12 +867,11 @@ function initStaffOrder() {
 
             } catch (err) {
                 showErrorModal(err.message, 'Order Failed');
-                $('complete').disabled = !cart.length;
+                if ($('complete'))$('complete').disabled = !cart.length;
             }
         };
     }
 
-    // Bind Print Button Click
     const printBtn = $('btnPrintReceipt');
     if (printBtn) {
         printBtn.onclick = () => {
@@ -742,4 +881,190 @@ function initStaffOrder() {
 
     renderGrid();
     renderCart();
+}
+
+/**
+ * Initialize Staff Receipts / Transaction History Module
+ */
+function initStaffReceipts() {
+    const table = document.getElementById('receiptTable');
+    if (!table) return;
+
+    const rows = Array.from(table.querySelectorAll('tbody tr'));
+    const PAGE_SIZE = 10;
+    let currentPage = 1;
+
+    const paymentSelect = document.getElementById('receiptFilter');
+    const rangeModeSelect = document.getElementById('receiptRangeMode');
+    const searchInput = document.getElementById('receiptSearch');
+
+    const dayWrap = document.getElementById('rangeDayWrap');
+    const monthWrap = document.getElementById('rangeMonthWrap');
+    const yearWrap = document.getElementById('rangeYearWrap');
+
+    const dayInput = document.getElementById('rangeDay');
+    const monthInput = document.getElementById('rangeMonth');
+    const yearInput = document.getElementById('rangeYear');
+
+    const emptyNote = document.getElementById('receiptEmpty');
+    const pageInfo = document.getElementById('pageInfo');
+    const pageNumbers = document.getElementById('pageNumbers');
+    const prevBtn = document.getElementById('prevPageBtn');
+    const nextBtn = document.getElementById('nextPageBtn');
+
+    const reconExpected = document.getElementById('reconExpected');
+    const reconActual = document.getElementById('reconActual');
+    const reconVariance = document.getElementById('reconVariance');
+
+    function toggleRangeInputs() {
+        const mode = rangeModeSelect?.value || 'day';
+        if (dayWrap) dayWrap.hidden = mode !== 'day';
+        if (monthWrap) monthWrap.hidden = mode !== 'month';
+        if (yearWrap) yearWrap.hidden = mode !== 'year';
+    }
+
+    function getFilteredRows() {
+        const paymentVal = (paymentSelect?.value || 'all').trim().toLowerCase();
+        const rangeMode = rangeModeSelect?.value || 'day';
+        const searchVal = (searchInput?.value || '').toLowerCase().trim();
+
+        const selectedDay = dayInput?.value || '';
+        const selectedMonth = monthInput?.value || '';
+        const selectedYear = yearInput?.value || '';
+
+        return rows.filter(row => {
+            const rowPayment = (row.dataset.payment || '').trim().toLowerCase();
+            const rowSearch = (row.dataset.search || '').toLowerCase();
+            const rowDate = (row.dataset.date || '').trim();
+
+            if (paymentVal !== 'all' && rowPayment !== paymentVal) return false;
+            if (searchVal && !rowSearch.includes(searchVal)) return false;
+
+            if (rangeMode === 'day' && selectedDay && rowDate !== selectedDay) return false;
+            if (rangeMode === 'month' && selectedMonth && !rowDate.startsWith(selectedMonth)) return false;
+            if (rangeMode === 'year' && selectedYear && !rowDate.startsWith(selectedYear)) return false;
+
+            return true;
+        });
+    }
+
+    function renderTable() {
+        toggleRangeInputs();
+        const filtered = getFilteredRows();
+        const totalItems = filtered.length;
+        const totalPages = Math.ceil(totalItems / PAGE_SIZE) || 1;
+
+        if (currentPage > totalPages) currentPage = totalPages;
+        if (currentPage < 1) currentPage = 1;
+
+        rows.forEach(r => r.style.display = 'none');
+
+        if (totalItems === 0) {
+            if (emptyNote) emptyNote.hidden = false;
+            if (pageInfo) pageInfo.textContent = 'Showing 0 transactions';
+            if (prevBtn) prevBtn.disabled = true;
+            if (nextBtn) nextBtn.disabled = true;
+            if (pageNumbers) pageNumbers.innerHTML = '';
+            updateCashDrawerAudit([]);
+            return;
+        }
+
+        if (emptyNote) emptyNote.hidden = true;
+
+        const startIdx = (currentPage - 1) * PAGE_SIZE;
+        const endIdx = Math.min(startIdx + PAGE_SIZE, totalItems);
+        const visibleRows = filtered.slice(startIdx, endIdx);
+
+        visibleRows.forEach(r => r.style.display = '');
+
+        if (pageInfo) pageInfo.textContent = `Showing ${startIdx + 1}-${endIdx} of ${totalItems} transactions`;
+
+        if (prevBtn) {
+            prevBtn.disabled = currentPage <= 1;
+            prevBtn.onclick = () => { if (currentPage > 1) { currentPage--; renderTable(); } };
+        }
+
+        if (nextBtn) {
+            nextBtn.disabled = currentPage >= totalPages;
+            nextBtn.onclick = () => { if (currentPage < totalPages) { currentPage++; renderTable(); } };
+        }
+
+        buildPageButtons(totalPages);
+        updateCashDrawerAudit(filtered);
+    }
+
+    function buildPageButtons(totalPages) {
+        if (!pageNumbers) return;
+        pageNumbers.innerHTML = '';
+        if (totalPages <= 1) return;
+
+        for (let i = 1; i <= totalPages; i++) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.textContent = i;
+            btn.className = i === currentPage ? 'btn btn--sm btn--primary' : 'btn btn--sm btn--ghost';
+            btn.style.cssText = 'padding: 2px 8px; margin: 0 2px;';
+            btn.onclick = () => { currentPage = i; renderTable(); };
+            pageNumbers.appendChild(btn);
+        }
+    }
+
+    function updateCashDrawerAudit(filteredRows) {
+        if (!reconExpected) return;
+
+        let cashSum = 0;
+        filteredRows.forEach(row => {
+            const isCash = (row.dataset.payment || '').toLowerCase() === 'cash';
+            if (isCash) {
+                const totalCell = row.querySelector('.mono.ta-r')?.textContent || '0';
+                const num = parseFloat(totalCell.replace(/[^0-9.]/g, '')) || 0;
+                cashSum += num;
+            }
+        });
+
+        reconExpected.value = '₱' + cashSum.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+        const actualVal = parseFloat(reconActual?.value) || 0;
+        if (reconActual?.value !== '' && reconVariance) {
+            const diff = actualVal - cashSum;
+            reconVariance.value = (diff >= 0 ? '+' : '') + '₱' + diff.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            reconVariance.style.color = diff < 0 ? 'var(--flag)' : 'var(--good)';
+        } else if (reconVariance) {
+            reconVariance.value = '₱0.00';
+            reconVariance.style.color = 'inherit';
+        }
+    }
+
+    [paymentSelect, rangeModeSelect, dayInput, monthInput, yearInput].forEach(el => {
+        el?.addEventListener('change', () => { currentPage = 1; renderTable(); });
+    });
+
+    searchInput?.addEventListener('input', () => { currentPage = 1; renderTable(); });
+    reconActual?.addEventListener('input', () => { updateCashDrawerAudit(getFilteredRows()); });
+
+    document.addEventListener('click', (e) => {
+        const openBtn = e.target.closest('[data-open-modal]');
+        if (openBtn) {
+            const modal = document.getElementById(openBtn.dataset.openModal);
+            if (modal) {
+                modal.classList.add('open');
+                document.body.classList.add('is-locked');
+            }
+        }
+    });
+
+    renderTable();
+}
+
+function printReceipt(containerId) {
+    const printElement = document.getElementById(containerId);
+    if (!printElement) return;
+
+    const printContents = printElement.innerHTML;
+    const originalContents = document.body.innerHTML;
+
+    document.body.innerHTML = `<div style="padding: 20px; font-family: monospace;">${printContents}</div>`;
+    window.print();
+    document.body.innerHTML = originalContents;
+    window.location.reload();
 }

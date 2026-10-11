@@ -179,7 +179,7 @@
     <x-admin.modal id="errorInvModal" title="Operation Failed" size="sm">
         <div style="padding: 14px 0; text-align: center;">
             <div style="font-size: 36px; margin-bottom: 8px;">⚠️</div>
-            <p style="margin: 0 0 4px; font-weight: 700; font-size: 16px; color: #c0392b;" id="errorInvTitle">Failed!</p>
+            <p style="margin: 0 0 4px; font-weight: 700; font-size: 16px; color: var(--flag);" id="errorInvTitle">Failed!</p>
             <p style="margin: 0; font-size: 13px; color: var(--ink-soft);" id="errorInvText">An unexpected error occurred during the transaction.</p>
         </div>
         <x-slot:footer>

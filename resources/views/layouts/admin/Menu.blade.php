@@ -154,7 +154,7 @@
                     <button type="button" class="btn btn--ghost" id="btnTriggerPhoto" style="width: 100%; height: 38px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; font-weight: 600; box-sizing: border-box; margin: 0; padding: 0 8px;">
                         📷 Add Photo
                     </button>
-                    <div id="photoFileName" style="font-size: 10px; color: #777; text-align: center; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" hidden></div>
+                    <div id="photoFileName" style="font-size: 10px; color: var(--ink-soft); text-align: center; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" hidden></div>
                 </div>
             </div>
 
@@ -176,7 +176,7 @@
                 </div>
             </div>
 
-            <div id="customPricingContainer" hidden style="margin-bottom: 16px; background: rgba(0,0,0,0.02); padding: 12px; border-radius: 8px; border: 1px solid var(--border, #eee);">
+            <div id="customPricingContainer" hidden style="margin-bottom: 16px; background: rgba(0,0,0,0.02); padding: 12px; border-radius: 8px; border: 1px solid var(--line-soft);">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                     <span style="font-size: 13px; font-weight: 600;">Pricing & Sizing Setup</span>
                     <select class="field" id="drinkPricingMode" style="width: 150px; height: 32px; font-size: 12px; padding: 2px 8px;">
@@ -322,7 +322,7 @@
             <input type="text" class="field" id="newTypeName" placeholder="e.g. Iced Coffee, Flavored Soda">
         </div>
 
-        <div style="margin-bottom: 12px; background: rgba(0,0,0,0.02); padding: 12px; border-radius: 8px; border: 1px solid var(--border, #eee);">
+        <div style="margin-bottom: 12px; background: rgba(0,0,0,0.02); padding: 12px; border-radius: 8px; border: 1px solid var(--line-soft);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                 <span style="font-size: 13px; font-weight: 600;">Pricing Structure</span>
                 <select class="field" id="typePriceMode" style="width: auto; height: 32px; font-size: 12px; padding: 2px 8px;">
@@ -356,13 +356,13 @@
             </div>
         </div>
 
-        <div style="margin-bottom: 12px; background: rgba(0,0,0,0.02); padding: 12px; border-radius: 8px; border: 1px solid var(--border, #eee);">
+        <div style="margin-bottom: 12px; background: rgba(0,0,0,0.02); padding: 12px; border-radius: 8px; border: 1px solid var(--line-soft);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                 <span style="font-size: 13px; font-weight: 600;">Allowed Category Add-ons</span>
                 <button type="button" class="btn btn--ghost btn--sm" id="btnAddCategoryAddon">+ Create Add-on</button>
             </div>
 
-            <div id="newAddonFormRow" style="display: none; grid-template-columns: 2fr 1fr auto; gap: 8px; margin-bottom: 10px; background: #fff; padding: 8px; border-radius: 6px; border: 1px solid var(--border, #ddd);">
+            <div id="newAddonFormRow" style="display: none; grid-template-columns: 2fr 1fr auto; gap: 8px; margin-bottom: 10px; background: #fff; padding: 8px; border-radius: 6px; border: 1px solid var(--line-soft);">
                 <input type="text" id="newAddonName" class="field" placeholder="Add-on Name (e.g. Espresso Shot)" style="height: 32px; font-size: 12px;">
                 <input type="number" id="newAddonPrice" class="field" placeholder="Price (₱)" step="0.01" style="height: 32px; font-size: 12px;">
                 <button type="button" class="btn btn--primary btn--sm" id="btnConfirmAddAddon" style="height: 32px; padding: 0 12px; font-size: 12px;">Add</button>
@@ -370,7 +370,7 @@
 
             <div id="categoryAddonsList" style="display: flex; flex-wrap: wrap; gap: 6px;">
                 @foreach ($addons as $addon)
-                    <label class="chip" style="cursor: pointer; user-select: none; display: flex; align-items: center; background: #f0ece1; padding: 4px 10px; border-radius: 16px; font-size: 12px;">
+                    <label class="chip" style="cursor: pointer; user-select: none; display: flex; align-items: center; background: var(--cream); padding: 4px 10px; border-radius: 16px; font-size: 12px;">
                         <input type="checkbox" class="type-addon-check" value="{{ $addon['id'] }}" style="margin-right: 6px;"> {{ $addon['name'] }} (+₱{{ number_format($addon['price'], 2) }})
                     </label>
                 @endforeach
@@ -412,7 +412,7 @@
     <x-admin.modal id="errorModal" title="Transaction Error" size="sm">
         <div style="padding: 14px 0; text-align: center;">
             <div style="font-size: 36px; margin-bottom: 8px;">⚠️</div>
-            <p style="margin: 0 0 4px; font-weight: 700; font-size: 16px; color: #c0392b;" id="errorModalTitle">Failed!</p>
+            <p style="margin: 0 0 4px; font-weight: 700; font-size: 16px; color: var(--flag);" id="errorModalTitle">Failed!</p>
             <p style="margin: 0; font-size: 13px; color: var(--ink-soft);" id="errorModalText">An unexpected error occurred during the transaction.</p>
         </div>
         <x-slot:footer>

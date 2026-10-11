@@ -19,7 +19,8 @@ class AdminController extends Controller
     public function dashboard()
     {
         $orders      = $this->getFormattedOrders();
-        $ingredients = $this->getFormattedIngredients();
+        // One row per branch + ingredient (same source as Inventory & Reports) so "low stock" counts match everywhere.
+        $ingredients = $this->getFormattedIngredientsWithBranches();
         $sales       = $this->getSalesByDay();
         $topItems    = $this->getTopItems();
 
@@ -478,7 +479,9 @@ class AdminController extends Controller
                 'ingredients.reorder_level',
                 'ingredients.cost',
                 'ingredients.is_active',
-                'branch_inventory.stock'
+                'branch_inventory.stock',
+                'branch_inventory.reorder_level as branch_reorder_level',
+                'branch_inventory.is_active as branch_active'
             )
             ->get();
 
@@ -493,9 +496,10 @@ class AdminController extends Controller
                 'name'        => $row->ingredient_name,
                 'unit'        => $row->unit,
                 'stock'       => (float) $row->stock,
-                'reorder'     => (float) $row->reorder_level,
+                // each branch's OWN reorder level (falls back to the global one only if missing)
+                'reorder'     => (float) ($row->branch_reorder_level ?? $row->reorder_level),
                 'cost'        => (float) $row->cost,
-                'is_active'   => (bool) $row->is_active,
+                'is_active'   => (bool) $row->is_active && (bool) $row->branch_active,
                 'used_today'  => (float) $branchUsed,
             ];
         })->toArray();

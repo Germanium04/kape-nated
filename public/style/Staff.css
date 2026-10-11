@@ -667,3 +667,25 @@ a.btn { display: inline-block; text-align: center; text-decoration: none; }
         padding: 10px !important;
     }
 }
+
+/* TRANSACTION SLIP MODAL OVERRIDES */
+#receiptTable ~ .backdrop .modal,
+[id^="receipt-modal-"] .modal--single {
+  width: min(440px, 92vw) !important;
+  max-height: 85vh !important;
+  padding: 20px !important;
+}
+
+[id^="receipt-modal-"] .modal-content-scroll {
+  overflow-y: auto !important;
+  max-height: 55vh !important;
+  padding: 0 4px !important;
+  margin: 10px 0 !important;
+}
+
+[id^="receipt-modal-"] .receipt-paper {
+  border: 1px dashed var(--line-soft) !important;
+  background: #fff !important;
+  padding: 16px !important;
+  box-shadow: none !important;
+}

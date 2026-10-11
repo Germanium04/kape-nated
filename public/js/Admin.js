@@ -555,13 +555,18 @@ function initReports() {
         });
         const reconciledList = Object.values(uniqueIngredientsMap);
 
-        const lowStockList = reconciledList.filter(i => (i.stock <= i.reorder));
+        // Same rule as Inventory + Dashboard: one row per branch & ingredient, using each branch's own reorder level.
+        // (reconciledList merges branches together, so it must NOT be used to decide what is "low".)
+        const trackedRows = ingredients.filter(i => i.is_active !== false);
+        const lowStockList = trackedRows
+            .filter(i => i.stock <= i.reorder)
+            .sort((a, b) => (a.stock / (a.reorder || 1)) - (b.stock / (b.reorder || 1)));
         const elReorder = document.getElementById('invCountReorder');
         const elTrackedNote = document.getElementById('invTrackedNote');
         const panelAttention = document.getElementById('panelItemsNeedingAttention');
 
         if (elReorder) elReorder.textContent = lowStockList.length;
-        if (elTrackedNote) elTrackedNote.textContent = `Of ${reconciledList.length} tracked ingredients`;
+        if (elTrackedNote) elTrackedNote.textContent = `Of ${trackedRows.length} tracked ${selectedBranch === 'all' ? 'branch stock items' : 'ingredients'}`;
 
         if (panelAttention) {
             if (lowStockList.length === 0 || categoryVal === 'movements' || categoryVal === 'value') {
@@ -595,7 +600,7 @@ function initReports() {
             const reason = (m.reason || '').toLowerCase();
             if (m.change > 0 && !reason.includes('transfer')) {
                 stockReceivedVal += (m.change * cost);
-            } else if (m.change < 0 && (reason.includes('spill') || reason.includes('spoil') || reason.includes('waste'))) {
+            } else if (m.change < 0 && reason !== 'order' && !reason.includes('transfer')) {
                 wasteCostVal += (Math.abs(m.change) * cost);
             }
         });
@@ -614,7 +619,8 @@ function initReports() {
             
             // Calculate usage trend from movements matching date and branch range
             movements.forEach(m => {
-                if (m.change < 0) {
+                // usage = stock consumed by orders only (waste / corrections / transfers are not "usage")
+                if (m.change < 0 && (m.reason || '').toLowerCase() === 'order') {
                     const consumed = Math.abs(m.change);
                     const ingName = m.ingredient;
                     const matchIng = rawIngredients.find(i => i.name === ingName);
@@ -684,11 +690,11 @@ function initReports() {
 
         tbodyAttention.innerHTML = pageItems.map(i => `
             <tr>
-                <td><b>${i.name}</b></td>
-                <td class="ta-r mono">${i.stock} ${i.unit}</td>
-                <td class="ta-r mono">${i.reorder} ${i.unit}</td>
-                <td class="ta-r muted">—</td>
-                <td class="ta-r"><span class="badge badge--low">Low</span></td>
+                <td><b>${i.name}</b>${i.branch_name ? ` <span class="muted">· ${i.branch_name}</span>` : ''}</td>
+                <td class="ta-r mono">${Number(i.stock).toLocaleString()} ${i.unit}</td>
+                <td class="ta-r mono">${Number(i.reorder).toLocaleString()} ${i.unit}</td>
+                <td class="ta-r muted">${i.used_today > 0 ? (Math.floor(i.stock / i.used_today) < 1 ? 'Today' : Math.floor(i.stock / i.used_today) + ' d') : '—'}</td>
+                <td class="ta-r">${i.stock <= 0 ? '<span class="badge badge--out">Out</span>' : '<span class="badge badge--low">Low</span>'}</td>
             </tr>
         `).join('') || '<tr><td colspan="5" class="empty-note ta-c">No items currently below reorder level.</td></tr>';
 

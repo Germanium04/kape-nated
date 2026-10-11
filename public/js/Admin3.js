@@ -50,9 +50,9 @@ function initInventory() {
         const notice = document.getElementById('invFormNotice');
         if (notice) {
             notice.textContent = msg;
-            notice.style.background = '#f8d7da';
-            notice.style.color = '#721c24';
-            notice.style.border = '1px solid #f5c6cb';
+            notice.style.background = 'var(--flag-pale)';
+            notice.style.color = 'var(--flag-dark)';
+            notice.style.border = '1px solid var(--flag)';
             notice.style.display = 'block';
         }
     }
@@ -271,10 +271,10 @@ function initInventory() {
                 return `<tr>
                     <td style="font-weight: 600; font-size: 12px; color: var(--ink-soft);">${trxId}</td>
                     <td style="font-size: 12.5px; color: var(--ink-soft);">${m.date}</td>
-                    <td style="font-weight: 600; color: var(--brand, #5a3e2b);">${m.branch}</td>
+                    <td style="font-weight: 600; color: var(--bar);">${m.branch}</td>
                     <td>${typeBadge}</td>
                     <td><strong>${m.ingredient}</strong> <span class="mono" style="margin-left: 4px; font-weight: 600;">(${qtyFormatted})</span></td>
-                    <td style="font-weight: 600; color: var(--ink-bold);">${m.performed_by || 'Admin User'}</td>
+                    <td style="font-weight: 600; color: var(--ink);">${m.performed_by || 'Admin User'}</td>
                     <td style="font-size: 12.5px; color: var(--ink-soft);">${m.reason || 'Restock'}</td>
                 </tr>`;
             }).join('') || '<tr><td colspan="7" class="empty-note">No manual stock operations logged for this criteria.</td></tr>';
@@ -383,7 +383,7 @@ function initInventory() {
                 </select>
             </div>
 
-            <button type="button" class="btn btn--ghost remove-stock-in-row" style="height: 38px; width: 38px; padding: 0; display: flex; align-items: center; justify-content: center; color: var(--red, #c0392b);">✕</button>
+            <button type="button" class="btn btn--ghost remove-stock-in-row" style="height: 38px; width: 38px; padding: 0; display: flex; align-items: center; justify-content: center; color: var(--flag);">✕</button>
         `;
 
         row.querySelector('.stock-in-item-select').addEventListener('change', (e) => {
@@ -447,7 +447,7 @@ function initInventory() {
                 </select>
             </div>
 
-            <button type="button" class="btn btn--ghost remove-transfer-row" style="height: 38px; width: 38px; padding: 0; display: flex; align-items: center; justify-content: center; color: var(--red, #c0392b);">✕</button>
+            <button type="button" class="btn btn--ghost remove-transfer-row" style="height: 38px; width: 38px; padding: 0; display: flex; align-items: center; justify-content: center; color: var(--flag);">✕</button>
         `;
 
         row.querySelector('.transfer-item-select').addEventListener('change', (e) => {

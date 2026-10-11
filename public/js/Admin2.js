@@ -48,9 +48,9 @@ function initMenu() {
         if (!notice) return;
 
         notice.textContent = message;
-        notice.style.background = isError ? '#f8d7da' : '#d4edda';
-        notice.style.color = isError ? '#721c24' : '#155724';
-        notice.style.border = isError ? '1px solid #f5c6cb' : '1px solid #c3e6cb';
+        notice.style.background = isError ? 'var(--flag-pale)' : 'var(--good-pale)';
+        notice.style.color = isError ? 'var(--flag-dark)' : 'var(--good-dark)';
+        notice.style.border = isError ? '1px solid var(--flag)' : '1px solid var(--good)';
         notice.style.display = 'block';
     }
 
@@ -184,7 +184,7 @@ function initMenu() {
             const tempId = 'temp_' + Date.now();
             const label = document.createElement('label');
             label.className = 'chip';
-            label.style.cssText = 'cursor: pointer; user-select: none; display: flex; align-items: center; background: #f0ece1; padding: 4px 10px; border-radius: 16px; font-size: 12px;';
+            label.style.cssText = 'cursor: pointer; user-select: none; display: flex; align-items: center; background: var(--cream); padding: 4px 10px; border-radius: 16px; font-size: 12px;';
             label.innerHTML = `<input type="checkbox" class="type-addon-check" value="${tempId}" checked style="margin-right: 6px;"> ${name} (+₱${price.toFixed(2)})`;
             
             addonsContainer.appendChild(label);
@@ -203,7 +203,7 @@ function initMenu() {
 
         if (!typeName) {
             showFormNotice('Please enter a Category / Drink Type Name.', true, 'drinkTypeNotice');
-            typeNameInput?.style.setProperty('border-color', '#c0392b');
+            typeNameInput?.style.setProperty('border-color', 'var(--flag)');
             typeNameInput?.focus();
             return;
         }
@@ -570,7 +570,7 @@ function renderTable() {
                 const isDisabled = ing && ing.is_active === false;
                 if (isDisabled) hasDisabledIngredient = true;
 
-                const chipStyle = isDisabled ? 'background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb;' : '';
+                const chipStyle = isDisabled ? 'background: var(--flag-pale); color: var(--flag-dark); border: 1px solid var(--flag);' : '';
                 const labelText = ing ? ing.name : k;
                 const unitText = ing ? ing.unit : '';
 
@@ -698,7 +698,7 @@ function renderTable() {
             if (p === '...') {
                 const span = document.createElement('span');
                 span.textContent = '…';
-                span.style.cssText = 'padding: 0 0.25rem; align-self: center; color: #888; font-size: 0.85rem;';
+                span.style.cssText = 'padding: 0 0.25rem; align-self: center; color: var(--ink-soft); font-size: 0.85rem;';
                 container.appendChild(span);
             } else {
                 const btn = document.createElement('button');
@@ -782,7 +782,7 @@ function renderTable() {
 
             if (!key) {
                 showFormNotice(`Please select an ingredient for recipe row #${i + 1}.`, true, 'drinkFormNotice');
-                selectEl.style.borderColor = '#c0392b';
+                selectEl.style.borderColor = 'var(--flag)';
                 selectEl.focus();
                 return false;
             }
@@ -790,7 +790,7 @@ function renderTable() {
             if (selectedKeys.has(key)) {
                 const ingName = selectEl.options[selectEl.selectedIndex]?.text || key;
                 showFormNotice(`"${ingName}" is already added to the recipe. Duplicate ingredients are not allowed.`, true, 'drinkFormNotice');
-                selectEl.style.borderColor = '#c0392b';
+                selectEl.style.borderColor = 'var(--flag)';
                 selectEl.focus();
                 return false;
             }
@@ -799,7 +799,7 @@ function renderTable() {
             const val = parseFloat(amountEl.value);
             if (isNaN(val) || val <= 0) {
                 showFormNotice(`Please input a valid positive amount for recipe row #${i + 1}.`, true, 'drinkFormNotice');
-                amountEl.style.borderColor = '#c0392b';
+                amountEl.style.borderColor = 'var(--flag)';
                 amountEl.focus();
                 return false;
             }
@@ -840,7 +840,7 @@ function renderTable() {
                 <option value="pc" ${currentUnit === 'pc' ? 'selected' : ''}>pc</option>
             </select>
 
-            <button type="button" class="btn btn--ghost remove-recipe-row" style="height: 36px; width: 36px; padding: 0; display: flex; align-items: center; justify-content: center; color: var(--red, #c0392b);">✕</button>
+            <button type="button" class="btn btn--ghost remove-recipe-row" style="height: 36px; width: 36px; padding: 0; display: flex; align-items: center; justify-content: center; color: var(--flag);">✕</button>
         `;
 
         const selectEl = row.querySelector('.recipe-ing-select');
@@ -863,7 +863,7 @@ function renderTable() {
             if (duplicates.includes(chosenKey)) {
                 const ingName = e.target.options[e.target.selectedIndex]?.text || chosenKey;
                 showFormNotice(`"${ingName}" is already selected in another row.`, true, 'drinkFormNotice');
-                selectEl.style.borderColor = '#c0392b';
+                selectEl.style.borderColor = 'var(--flag)';
             } else {
                 selectEl.style.borderColor = '';
             }
@@ -896,7 +896,7 @@ function renderTable() {
         const name = nameInput?.value.trim();
         if (!name) {
             showFormNotice('Please enter a drink name.', true, 'drinkFormNotice');
-            nameInput?.style.setProperty('border-color', '#c0392b');
+            nameInput?.style.setProperty('border-color', 'var(--flag)');
             nameInput?.focus();
             return;
         }
@@ -906,7 +906,7 @@ function renderTable() {
 
         if (!isCustom && !drinkTypeId) {
             showFormNotice('Please select a Drink Type or check "Custom / Solo Drink".', true, 'drinkFormNotice');
-            drinkTypeSelect?.style.setProperty('border-color', '#c0392b');
+            drinkTypeSelect?.style.setProperty('border-color', 'var(--flag)');
             drinkTypeSelect?.focus();
             return;
         }
@@ -919,7 +919,7 @@ function renderTable() {
                 const price = parseFloat(pEl?.value);
                 if (isNaN(price) || price <= 0) {
                     showFormNotice('Please enter a valid base price.', true, 'drinkFormNotice');
-                    pEl?.style.setProperty('border-color', '#c0392b');
+                    pEl?.style.setProperty('border-color', 'var(--flag)');
                     pEl?.focus();
                     return;
                 }
@@ -928,7 +928,7 @@ function renderTable() {
                 const price = parseFloat(gEl?.value);
                 if (isNaN(price) || price <= 0) {
                     showFormNotice('Please enter a valid Grande price.', true, 'drinkFormNotice');
-                    gEl?.style.setProperty('border-color', '#c0392b');
+                    gEl?.style.setProperty('border-color', 'var(--flag)');
                     gEl?.focus();
                     return;
                 }
@@ -939,7 +939,7 @@ function renderTable() {
                 const vPrice = parseFloat(vEl?.value);
                 if (isNaN(vPrice) || vPrice <= 0) {
                     showFormNotice('Please enter a valid Venti price.', true, 'drinkFormNotice');
-                    vEl?.style.setProperty('border-color', '#c0392b');
+                    vEl?.style.setProperty('border-color', 'var(--flag)');
                     vEl?.focus();
                     return;
                 }

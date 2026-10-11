@@ -23,6 +23,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700&family=Karla:wght@400;500;600;700&display=swap" rel="stylesheet">
 
     <link rel="stylesheet" href="{{ asset('style/Staff.css') }}">
+    <link rel="stylesheet" href="{{ asset('style/Authenticate.css') }}">
+    <link rel="stylesheet" href="{{ asset('style/Align.css') }}">
 </head>
 <body>
 
@@ -32,6 +34,7 @@
     <nav class="topnav">
         <a href="{{ route('staff.orders') }}"    class="{{ request()->routeIs('staff.orders')    ? 'is-current' : '' }}">Order</a>
         <a href="{{ route('staff.inventory') }}" class="{{ request()->routeIs('staff.inventory') ? 'is-current' : '' }}">Inventory</a>
+        <a href="{{ route('staff.receipts') }}" class="{{ request()->routeIs('staff.receipts') ? 'is-current' : '' }}">Receipts</a>
     </nav>
 
     <div class="topbar-user" id="userMenu">
@@ -55,6 +58,9 @@
 </header>
 
 {{ $slot }}
+
+@include('layouts.authentication.Ui-feedback')
+<script src="{{ asset('js/Authenticate.js') }}"></script>
 
 <script>
     // User menu: opens on click, closes on outside click or Esc.

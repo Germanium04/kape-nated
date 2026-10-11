@@ -1,0 +1,589 @@
+/* =====================================================================
+   Align.css  ·  kape-nated
+   One shared look for buttons, fields, tables, badges, tabs, stats,
+   panels, pagination, modals and dialogs, on BOTH Admin and Staff.
+
+   LOAD ORDER (last, after Admin.css / Staff.css and Authenticate.css):
+       <link rel="stylesheet" href="{{ asset('style/Admin.css') }}">
+       <link rel="stylesheet" href="{{ asset('style/Authenticate.css') }}">
+       <link rel="stylesheet" href="{{ asset('style/Align.css') }}">
+
+   Nothing in Admin.css / Staff.css needs to be deleted. This file wins
+   by coming last. Delete it and you're back to the old look.
+   ===================================================================== */
+
+
+/* ---------------------------------------------------------------------
+   0. Missing variables
+   Admin.js / Staff.js set inline colours with var(--flag-dark),
+   var(--good-dark), var(--primary) and var(--muted), but none of them
+   were defined anywhere, so those colours silently failed.
+   --------------------------------------------------------------------- */
+:root {
+    --flag-dark:  #7d2b1c;
+    --good-dark:  #2f5029;
+    --primary:    var(--bar);
+    --muted:      var(--ink-soft);
+
+    --control-h:  38px;
+    --shadow-sm:  0 1px 3px rgba(0, 0, 0, .04);
+    --shadow-pop: 0 12px 36px rgba(0, 0, 0, .28);
+    --scrim:      rgba(38, 24, 15, .55);
+}
+
+/* Small utilities the JS / blades already use but nothing defined */
+.muted   { color: var(--ink-soft); }
+.text-sm { font-size: 13px; }
+.ta-c    { text-align: center; }
+
+
+/* ---------------------------------------------------------------------
+   1. Page rhythm + headings
+   --------------------------------------------------------------------- */
+.page-head,
+.page-head-row { margin-bottom: 0; }
+
+.page-head h1 { font-size: 30px; }
+
+/* Staff pages: same vertical rhythm as the admin .page container */
+.wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+.wrap > .page-head,
+.wrap > .panel,
+.wrap > .stat-row,
+.wrap > .flash { margin-bottom: 0; }
+
+
+/* ---------------------------------------------------------------------
+   2. Buttons
+   .btn            neutral
+   .btn--primary   dark (same as the top bar)
+   .btn--ghost     transparent
+   .btn--danger    red
+   Admin had primary = tan and Staff had primary = dark. Now both dark.
+   --------------------------------------------------------------------- */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: auto;
+    margin: 0;
+    min-height: var(--control-h);
+    padding: 8px 18px;
+    font: inherit;
+    font-size: 14.5px;
+    font-weight: 600;
+    line-height: 1.2;
+    text-decoration: none;
+    white-space: nowrap;
+    color: var(--ink);
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background .12s, color .12s, border-color .12s;
+}
+.btn:hover { background: var(--tan-pale); color: var(--ink); }
+
+.btn--primary {
+    display: inline-flex;
+    width: auto;
+    margin-left: 0;
+    color: #fdf6ee;
+    background: var(--bar);
+    border-color: var(--bar);
+}
+.btn--primary:hover {
+    color: #fff;
+    background: var(--tan-dark);
+    border-color: var(--tan-dark);
+}
+
+.btn--ghost { background: transparent; }
+.btn--ghost:hover { background: var(--tan-pale); color: var(--ink); }
+
+.btn--danger { color: #fff; background: var(--flag); border-color: var(--flag); }
+.btn--danger:hover { background: var(--flag-dark); border-color: var(--flag-dark); color: #fff; }
+
+.btn--sm { min-height: 32px; padding: 4px 12px; font-size: 13px; }
+
+.btn:disabled,
+.btn[disabled] { opacity: .5; cursor: not-allowed; pointer-events: none; }
+
+/* The Dashboard "Open inventory" button sat bottom-right on purpose */
+.panel--warning .panel-body > .btn--primary { margin-left: auto; width: fit-content; }
+
+/* Staff: the main action buttons are bare .btn in the markup
+   (Complete Order, Add to Order, Confirm Stock-In). Give them the
+   primary look without touching the blade files. */
+.ticket > .btn,
+.modal .body > .btn,
+.staff-modal-actions > .btn:not(.btn--ghost) {
+    color: #fdf6ee;
+    background: var(--bar);
+    border-color: var(--bar);
+}
+.ticket > .btn:hover,
+.modal .body > .btn:hover,
+.staff-modal-actions > .btn:not(.btn--ghost):hover {
+    color: #fff;
+    background: var(--tan-dark);
+    border-color: var(--tan-dark);
+}
+.ticket > .btn { width: 100%; margin-top: 10px; }
+.modal .body > .btn { width: 100%; }
+
+/* Page-number buttons (JS draws the current page as .btn--primary) */
+.pagination-numbers-group .btn,
+.pagination-numbers-box .btn { min-width: 32px; padding: 4px 8px; }
+
+
+/* ---------------------------------------------------------------------
+   3. Fields
+   --------------------------------------------------------------------- */
+.field,
+.filters select,
+.filters input {
+    height: var(--control-h);
+    padding: 6px 10px;
+    font: inherit;
+    font-size: 14.5px;
+    color: var(--ink);
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+}
+textarea.field { height: auto; min-height: 84px; }
+
+.field:focus,
+.filters select:focus,
+.filters input:focus,
+.payment-tendered-input:focus,
+.payment-ref-input:focus {
+    outline: none;
+    border-color: var(--tan-dark);
+    box-shadow: 0 0 0 3px var(--tan-pale);
+}
+
+.field[readonly] { background: #faf6f0; }
+.field:disabled  { opacity: .6; cursor: not-allowed; }
+
+/* JS adds .field--error but it was never styled */
+.field--error,
+.field.field--error {
+    border-color: var(--flag);
+    box-shadow: 0 0 0 3px var(--flag-pale);
+}
+
+/* Labels: Admin and Staff used 4 different label styles */
+.field-group > span,
+.inventory-filter-label,
+.form-group-label,
+.order-label-text {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink-soft);
+}
+.field-group,
+.form-group-block,
+.order-field-type,
+.order-field-search { gap: 5px; }
+
+/* iOS zooms into fields under 16px */
+@media (max-width: 640px) {
+    .field { font-size: 16px; }
+}
+
+
+/* ---------------------------------------------------------------------
+   4. Panels
+   --------------------------------------------------------------------- */
+.panel {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+}
+.panel-head {
+    gap: 12px;
+    padding: 12px 18px;
+    background: none;
+    border-bottom: 1px solid var(--line-soft);
+}
+.panel-head h2 { font-size: 18px; }
+.panel-note    { font-size: 13px; color: var(--ink-soft); }
+.panel-body    { padding: 16px 18px 18px; }
+.panel-body.table-body-flush { padding: 0; }
+
+
+/* ---------------------------------------------------------------------
+   5. Stat cards (.stat, .stat-card)
+   --------------------------------------------------------------------- */
+.stat-row { gap: 16px; }
+
+.stat,
+.stat-card {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 14px 18px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+}
+
+.stat-label,
+.stat-card-title {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink-soft);
+}
+
+.stat-value,
+.stat-card-value {
+    margin: 2px 0;
+    font-family: 'Baloo 2', 'Karla', system-ui, sans-serif;
+    font-size: 26px;
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--bar);
+    text-align: left;          /* Admin had it right-aligned */
+    font-variant-numeric: tabular-nums;
+}
+.stat-value--sm { font-size: 19px; }
+
+.stat-trend,
+.stat-card-sub {
+    margin: 0;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+}
+
+/* Left accent. Redeclared because the card border shorthand above
+   would otherwise wipe them. Staff now gets them too. */
+.stat--up    { border-left: 5px solid var(--good); }
+.stat--down  { border-left: 5px solid var(--tan-dark); }
+.stat--alert { border-left: 5px solid var(--flag) !important; }
+
+
+/* ---------------------------------------------------------------------
+   6. Tables
+   Note: Admin's  `.table th { text-align:left }`  was beating `.ta-r`,
+   so every right-aligned number column had a LEFT-aligned header.
+   --------------------------------------------------------------------- */
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+    text-align: left;
+}
+.table th {
+    padding: 10px 12px;
+    font-size: 12.5px;
+    font-weight: 600;
+    text-align: left;
+    white-space: nowrap;
+    color: var(--ink-soft);
+    background: var(--cream);
+    border-bottom: 1px solid var(--line-soft);
+}
+.table th:first-child { border-top-left-radius:  var(--radius-sm); }
+.table th:last-child  { border-top-right-radius: var(--radius-sm); }
+
+.table td {
+    padding: 11px 12px;
+    vertical-align: middle;
+    color: var(--ink);
+    border-bottom: 1px solid var(--line-soft);
+}
+.table tbody tr:last-child td { border-bottom: 0; }
+.table tbody tr:hover         { background: #faf4ec; }
+
+.table th.ta-r, .table td.ta-r { text-align: right; }
+.table th.ta-c, .table td.ta-c { text-align: center; }
+
+.table--compact th,
+.table--compact td { padding: 7px 10px; }
+
+.table tfoot td { padding: 10px 12px; font-weight: 700; border-top: 1px solid var(--line); }
+
+.row--flag,
+.table tr.row--flag { background: #fdf3f0; }
+.table tbody tr.row--flag:hover { background: #fbe9e4; }
+
+.empty-note {
+    margin: 0;
+    padding: 24px 12px !important;
+    text-align: center;
+    color: var(--ink-soft);
+}
+
+
+/* ---------------------------------------------------------------------
+   7. Badges
+   --------------------------------------------------------------------- */
+.badge {
+    display: inline-block;
+    padding: 2px 10px;
+    font-size: 12.5px;
+    font-weight: 600;
+    line-height: 1.5;
+    white-space: nowrap;
+    text-transform: none;
+    border: 1px solid transparent;
+    border-radius: 999px;
+}
+.badge--ok      { background: var(--good-pale); border-color: var(--good);      color: var(--good-dark); }
+.badge--info    { background: #fdf0dd;          border-color: var(--tan-dark);  color: #7a4f22; }
+.badge--low     { background: var(--flag-pale); border-color: var(--flag);      color: var(--flag-dark); }
+.badge--out     { background: var(--flag-dark); border-color: var(--flag-dark); color: #fff; }
+.badge--muted,
+.badge--neutral { background: #eee7e0;          border-color: var(--line-soft); color: var(--ink-soft); }  /* --neutral was used by Admin.js but undefined */
+
+
+/* ---------------------------------------------------------------------
+   8. Tabs  (admin .tab-btn--*, staff .inventory-tab-btn)
+   --------------------------------------------------------------------- */
+.tab-nav-row,
+.inventory-tab-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 16px;
+    padding-bottom: 0;
+    border-bottom: 1px solid var(--line-soft);
+}
+
+.tab-btn--active,
+.tab-btn--inactive,
+.inventory-tab-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: -1px;
+    padding: 8px 14px;
+    font: inherit;
+    font-size: 14.5px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    background: none;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+}
+.tab-btn--inactive:hover,
+.inventory-tab-btn:hover { color: var(--ink); }
+
+.tab-btn--active,
+.inventory-tab-btn.is-active {
+    color: var(--bar);
+    border-bottom-color: var(--tan-dark);
+}
+.tab-badge,
+.inventory-tab-badge { margin-left: 4px; font-size: 11px; }
+
+
+/* ---------------------------------------------------------------------
+   9. Pagination (admin .pagination-bar/-wrapper, staff .pagination-bar-wrap)
+   --------------------------------------------------------------------- */
+.pagination-bar,
+.pagination-wrapper,
+.pagination-bar-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 14px;
+    padding: 12px 0 0;
+    background: none;
+    border-top: 1px solid var(--line-soft);
+}
+.pagination-bar-wrap { margin-top: 0; padding: 12px 18px; }   /* staff: flush inside the panel */
+
+.pagination-controls-group,
+.pagination-controls-box { display: flex; align-items: center; gap: 6px; }
+.pagination-numbers-group,
+.pagination-numbers-box  { display: flex; gap: 4px; }
+
+.pagination-info-text { font-size: 13px; color: var(--ink-soft); }
+
+
+/* ---------------------------------------------------------------------
+   10. Modals  -  ADMIN  (.modal > .modal-scrim + .modal-box)
+   Form / detail modals (md, lg): dark header bar.
+   Small dialogs (sm: confirm, success, error, receipt): light,
+   centred title: same as the Staff dialogs.
+   --------------------------------------------------------------------- */
+.modal > .modal-scrim { background: var(--scrim); }
+
+.modal-box {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-pop);
+}
+.modal-head {
+    padding: 12px 18px;
+    color: #fdf6ee;
+    background: var(--bar);
+    border-radius: 9px 9px 0 0;
+}
+.modal-head h2 { font-size: 17px; color: inherit; }
+
+.modal-x {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    font-size: 22px;
+    line-height: 1;
+    color: inherit;
+    background: transparent;
+    border: 0;
+    border-radius: 50%;
+    cursor: pointer;
+}
+.modal-x:hover { background: rgba(253, 246, 238, .15); }
+
+.modal-body { padding: 18px; }
+.modal-foot {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 12px 18px 16px;
+    border-top: 1px solid var(--line-soft);
+}
+
+/* sm = dialog style */
+.modal-box--sm .modal-head {
+    position: relative;
+    justify-content: center;
+    color: var(--ink);
+    background: transparent;
+    border-bottom: 1px solid var(--line-soft);
+    border-radius: 0;
+}
+.modal-box--sm .modal-x {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    margin: 0;
+    transform: translateY(-50%);
+    color: var(--ink-soft);
+}
+.modal-box--sm .modal-x:hover { background: var(--tan-pale); color: var(--ink); }
+.modal-box--sm .modal-foot { border-top: 0; }
+.modal-box--sm .modal-foot .btn { flex: 1; }
+
+
+/* ---------------------------------------------------------------------
+   11. Modals  -  STAFF  (.backdrop > .modal)
+   --------------------------------------------------------------------- */
+.backdrop { background: var(--scrim); }
+
+.backdrop > .modal {
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-pop);
+}
+
+/* Staff Stock Action form: same dark header bar + footer as admin md modals */
+.staff-modal-box { padding: 0 !important; }
+
+.staff-modal-header {
+    margin: 0;
+    padding: 12px 18px;
+    color: #fdf6ee;
+    background: var(--bar);
+    border-bottom: 0;
+}
+.staff-modal-title { font-size: 17px; color: inherit; }
+
+.staff-modal-header .close,
+.staff-modal-close {
+    position: static;
+    width: 28px;
+    height: 28px;
+    font-size: 22px;
+    color: inherit;
+    background: transparent;
+}
+.staff-modal-header .close:hover,
+.staff-modal-close:hover { background: rgba(253, 246, 238, .15); }
+
+.staff-modal-form { padding: 18px; gap: 14px; }
+
+.staff-modal-actions {
+    justify-content: flex-end;
+    margin: 4px -18px -18px;
+    padding: 12px 18px 16px;
+    border-top: 1px solid var(--line-soft);
+}
+.staff-modal-actions > .btn { flex: 0 0 auto; }
+
+/* The little dark ✕ on the drink-options modal */
+.close { background: var(--bar); color: #fdf6ee; }
+.close:hover { background: var(--tan-dark); }
+
+
+/* ---------------------------------------------------------------------
+   12. Receipt paper (admin .receipt, staff .receipt-paper)
+   --------------------------------------------------------------------- */
+.receipt,
+.receipt-paper {
+    padding: 16px 18px;
+    background: #fff;
+    border: 1px dashed var(--line-soft);
+    border-radius: var(--radius-sm);
+    box-shadow: none;
+}
+
+
+/* ---------------------------------------------------------------------
+   13. Confirm dialog + toasts  (Ui-feedback)
+   Was a dark card; now light like every other modal.
+   --------------------------------------------------------------------- */
+.ui-dialog {
+    padding: 24px 24px 20px;
+    text-align: center;
+    color: var(--ink);
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-pop);
+}
+.ui-dialog::backdrop { background: var(--scrim); }
+.ui-dialog h3 { font-size: 18px; color: var(--ink); }
+.ui-dialog p  { color: var(--ink-soft); }
+
+.ui-dialog .btn {
+    min-height: var(--control-h);
+    color: var(--ink);
+    background: var(--card);
+    border: 1px solid var(--line);
+}
+.ui-dialog .btn:hover { background: var(--tan-pale); }
+.ui-dialog .btn--primary {
+    color: #fdf6ee;
+    background: var(--bar);
+    border-color: var(--bar);
+}
+.ui-dialog .btn--primary:hover { background: var(--tan-dark); border-color: var(--tan-dark); color: #fff; }
+.ui-dialog .btn--ghost { color: var(--ink); background: transparent; border-color: var(--line); }
+.ui-dialog .btn--ghost:hover { background: var(--tan-pale); }
+
+
+/* ---------------------------------------------------------------------
+   14. Staff order-screen leftovers
+   --------------------------------------------------------------------- */
+.payment-tendered-input,
+.payment-ref-input { height: var(--control-h); }

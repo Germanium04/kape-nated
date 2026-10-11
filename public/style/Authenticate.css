@@ -1,4 +1,16 @@
-:root {
+/* =====================================================================
+   Authenticate.css
+   Login / Signup styles + shared feedback (toasts, confirm dialog).
+
+   Safe to load on the admin/staff dashboards too: the page-level rules
+   only apply under <body class="auth-page">, and the palette variables
+   live on the components instead of :root, so nothing here can override
+   Staff.css / Admin.css.
+   ===================================================================== */
+
+.auth-page,
+.ui-toasts,
+.ui-dialog {
     --bar:        #2b1a11;
     --ink:        #26180f;
     --ink-soft:   #6b5748;
@@ -11,44 +23,45 @@
     --tan-pale:   #edd6ba;
     --flag:       #a63d2a;
     --flag-pale:  #f7e2dc;
+    --flag-light: #ff9b87;
     --good:       #46703f;
     --good-pale:  #e4efdf;
     --radius:     10px;
     --radius-sm:  6px;
 }
 
-* { box-sizing: border-box; }
-
 [hidden] { display: none !important; }
 
-html { -webkit-text-size-adjust: 100%; height: 100%; }
+.auth-page *,
+.ui-toasts *,
+.ui-dialog * { box-sizing: border-box; }
 
-body {
+/* ---------- login / signup page ---------- */
+.auth-page {
     margin: 0;
-    min-height: 100%;
+    min-height: 100vh;
     background: var(--cream);
-    /* Near-white on purpose: everything visible sits inside the dark .auth-form
-       card below, so this is "default text color for a dark background," not
-       a mistake — it just reuses the --card token as a color instead of a
-       background fill. */
+    /* Near-white on purpose: everything visible sits inside the dark
+       .auth-form card, so this is "default text color for a dark card". */
     color: var(--card);
     font-family: 'Karla', system-ui, sans-serif;
     font-size: 15px;
     line-height: 1.5;
+    -webkit-text-size-adjust: 100%;
 }
 
-body.is-locked { overflow: hidden; }
-
-h1, h2, h3, .brand, .stat-value {
+.auth-page h1,
+.auth-page h2,
+.auth-page h3 {
     font-family: 'Baloo 2', 'Karla', system-ui, sans-serif;
     font-weight: 600;
     letter-spacing: 0.1px;
     margin: 0;
 }
 
-h2 { font-weight: bold; font-size: 26px; }
-p { color: var(--line-soft); }
-label { color: var(--cream); }
+.auth-page h2 { font-weight: bold; font-size: 26px; }
+.auth-page p  { color: var(--line-soft); }
+.auth-page label { color: var(--cream); }
 
 /* ---------- page shell: centers the card at any screen height ---------- */
 .auth-login,
@@ -72,9 +85,9 @@ label { color: var(--cream); }
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.788);
 }
 
-/* A fixed cap in pixels, not a percentage of the viewport — a percentage
-   width means the card is oddly narrow on a phone and absurdly wide on a
-   large monitor. Signup gets a bit more room since it holds more fields. */
+/* Fixed pixel caps, not a % of the viewport: a percentage is oddly narrow
+   on a phone and absurdly wide on a big monitor. Signup holds more fields,
+   so it gets a bit more room. */
 .auth-login  .auth-form { max-width: 400px; }
 .auth-signup .auth-form { max-width: 480px; }
 
@@ -84,28 +97,28 @@ label { color: var(--cream); }
 }
 
 /* ---------- form elements ---------- */
-.form-group {
+.auth-page .form-group {
     display: flex;
     flex-direction: column;
     gap: 6px;
     margin-bottom: 16px;
 }
 
-.form-group label {
+.auth-page .form-group label {
     font-size: 13px;
     font-weight: 600;
     color: var(--tan-pale);
 }
 
-/* Pairs two fields side by side on wider screens (First/Last name, Username/
-   Contact); the 480px breakpoint below stacks them back to one column. */
-.form-row {
+/* Pairs two fields side by side (First/Last name, Username/Contact);
+   the 480px breakpoint below stacks them back to one column. */
+.auth-page .form-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 0 14px;
 }
 
-.field {
+.auth-page .field {
     width: 100%;
     padding: 10px 12px;
     border: 1px solid var(--line-soft);
@@ -113,18 +126,28 @@ label { color: var(--cream); }
     background: var(--card);
     color: var(--ink);
     font-family: 'Karla', system-ui, sans-serif;
-    /* 16px, not 15 — anything under 16px makes iOS Safari auto-zoom the page
-       when the field is tapped, which is jarring on a login form. */
+    /* 16px, not 15: anything under 16px makes iOS Safari auto-zoom the
+       page when the field is tapped. */
     font-size: 16px;
 }
 
-.field:focus {
+.auth-page .field:focus {
     outline: none;
     border-color: var(--tan-dark);
     box-shadow: 0 0 0 3px var(--tan-pale);
 }
 
-.btn {
+.auth-page .field.is-invalid {
+    border-color: var(--flag);
+    box-shadow: 0 0 0 3px var(--flag-pale);
+}
+
+.auth-page .field-error {
+    color: var(--flag-light);
+    font-size: 13px;
+}
+
+.auth-page .btn {
     display: inline-block;
     width: 100%;
     text-align: center;
@@ -139,12 +162,9 @@ label { color: var(--cream); }
     margin-top: 12px;
 }
 
-.btn--primary {
-    background: var(--tan-dark);
-    color: var(--card);
-}
-
-.btn--primary:hover { background: var(--tan); }
+.auth-page .btn--primary { background: var(--tan-dark); color: var(--card); }
+.auth-page .btn--primary:hover { background: var(--tan); }
+.auth-page .btn[disabled] { opacity: 0.6; cursor: not-allowed; }
 
 .auth-footer {
     text-align: center;
@@ -159,6 +179,116 @@ label { color: var(--cream); }
     text-decoration: none;
 }
 
+/* =====================================================================
+   FEEDBACK: toasts + confirmation dialog (used on auth AND dashboards)
+   ===================================================================== */
+
+/* ---------- toasts ---------- */
+.ui-toasts {
+    position: fixed;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(92vw, 420px);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 2000;
+    pointer-events: none;
+    font-family: 'Karla', system-ui, sans-serif;
+}
+
+.ui-toast {
+    pointer-events: auto;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 14px;
+    border: 1px solid;
+    border-radius: var(--radius-sm);
+    background: var(--card);
+    color: var(--ink);
+    font-size: 14px;
+    line-height: 1.4;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+    animation: ui-in 0.2s ease-out;
+    transition: opacity 0.2s, transform 0.2s;
+}
+
+.ui-toast--good { border-color: var(--good); background: var(--good-pale); }
+.ui-toast--bad  { border-color: var(--flag); background: var(--flag-pale); }
+
+.ui-toast__msg { flex: 1; }
+
+.ui-toast__close {
+    background: none;
+    border: 0;
+    padding: 0 2px;
+    font-size: 20px;
+    line-height: 1;
+    color: inherit;
+    cursor: pointer;
+}
+
+.ui-toast.is-leaving { opacity: 0; transform: translateY(-6px); }
+
+@keyframes ui-in {
+    from { opacity: 0; transform: translateY(-8px); }
+}
+
+/* ---------- confirmation dialog ---------- */
+.ui-dialog {
+    width: min(92vw, 380px);
+    padding: 26px 24px 22px;
+    border: 1px solid var(--ink);
+    border-radius: var(--radius);
+    background: var(--bar);
+    color: var(--card);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+    font-family: 'Karla', system-ui, sans-serif;
+}
+
+.ui-dialog::backdrop { background: rgba(20, 10, 5, 0.65); }
+
+.ui-dialog h3 {
+    margin: 0 0 6px;
+    font-family: 'Baloo 2', 'Karla', system-ui, sans-serif;
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--card);
+}
+
+.ui-dialog p {
+    margin: 0 0 20px;
+    font-size: 14px;
+    color: var(--line-soft);
+}
+
+.ui-dialog__actions { display: flex; gap: 10px; }
+
+.ui-dialog .btn {
+    flex: 1;
+    margin: 0;
+    padding: 11px 12px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    text-align: center;
+    cursor: pointer;
+}
+
+.ui-dialog .btn--primary { background: var(--tan-dark); color: var(--card); }
+.ui-dialog .btn--primary:hover { background: var(--tan); }
+
+.ui-dialog .btn--ghost {
+    background: transparent;
+    color: var(--tan-pale);
+    border-color: var(--line-soft);
+}
+.ui-dialog .btn--ghost:hover { background: rgba(255, 255, 255, 0.08); }
+
 /* ---------- responsive ---------- */
 @media (max-width: 480px) {
     .auth-login,
@@ -170,10 +300,14 @@ label { color: var(--cream); }
         padding: 30px 22px;
     }
 
-    h2 { font-size: 22px; }
+    .auth-page h2 { font-size: 22px; }
 
     /* Paired fields drop back to one column so nothing gets squeezed. */
-    .form-row {
+    .auth-page .form-row {
         grid-template-columns: 1fr;
     }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ui-toast { animation: none; transition: none; }
 }

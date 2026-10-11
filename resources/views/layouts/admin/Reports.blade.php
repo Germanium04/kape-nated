@@ -150,8 +150,8 @@
             </table>
 
             <!-- Drink Breakdown Pagination -->
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 8px; border-top: 1px solid var(--border-color, #e5e7eb);">
-                <span id="menuPageInfo" style="font-size: 13px; color: #6b7280;">Showing items</span>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 8px; border-top: 1px solid var(--line-soft);">
+                <span id="menuPageInfo" style="font-size: 13px; color: var(--ink-soft);">Showing items</span>
                 <div style="display: flex; gap: 6px;">
                     <button type="button" class="btn btn--sm" id="btnMenuPrev" style="padding: 4px 10px;">&larr; Prev</button>
                     <button type="button" class="btn btn--sm" id="btnMenuNext" style="padding: 4px 10px;">Next &rarr;</button>
@@ -208,8 +208,8 @@
                 </table>
 
                 <!-- Attention Items Pagination Controls -->
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 8px; border-top: 1px solid var(--border-color, #e5e7eb);">
-                    <span id="attentionPageInfo" style="font-size: 13px; color: #6b7280;">Showing low stock items</span>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 8px; border-top: 1px solid var(--line-soft);">
+                    <span id="attentionPageInfo" style="font-size: 13px; color: var(--ink-soft);">Showing low stock items</span>
                     <div style="display: flex; gap: 6px;">
                         <button type="button" class="btn btn--sm" id="btnAttentionPrev" style="padding: 4px 10px;">&larr; Prev</button>
                         <button type="button" class="btn btn--sm" id="btnAttentionNext" style="padding: 4px 10px;">Next &rarr;</button>
@@ -240,8 +240,8 @@
                     </table>
 
                     <!-- Recent Movements Pagination -->
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 8px; border-top: 1px solid var(--border-color, #e5e7eb);">
-                        <span id="movementsPageInfo" style="font-size: 13px; color: #6b7280;">Showing items</span>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 8px; border-top: 1px solid var(--line-soft);">
+                        <span id="movementsPageInfo" style="font-size: 13px; color: var(--ink-soft);">Showing items</span>
                         <div style="display: flex; gap: 6px;">
                             <button type="button" class="btn btn--sm" id="btnMovementsPrev" style="padding: 4px 10px;">&larr; Prev</button>
                             <button type="button" class="btn btn--sm" id="btnMovementsNext" style="padding: 4px 10px;">Next &rarr;</button>
@@ -269,8 +269,8 @@
             </table>
 
             <!-- Pagination Bar -->
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border-color, #e5e7eb);">
-                <span id="reconcilePageInfo" style="font-size: 13px; color: #6b7280;">Showing 1 to 10 of items</span>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line-soft);">
+                <span id="reconcilePageInfo" style="font-size: 13px; color: var(--ink-soft);">Showing 1 to 10 of items</span>
                 <div style="display: flex; gap: 8px;">
                     <button type="button" class="btn btn--sm" id="btnReconcilePrev" style="padding: 4px 12px;">&larr; Previous</button>
                     <button type="button" class="btn btn--sm" id="btnReconcileNext" style="padding: 4px 12px;">Next &rarr;</button>

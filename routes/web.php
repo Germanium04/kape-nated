@@ -11,9 +11,14 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
     Route::get('/', [AuthController::class, 'showLogin'])->name('authentication.login');
-    Route::post('/login', [AuthController::class, 'login'])->name('authentication.login.submit');
+    Route::post('/login', [AuthController::class, 'login'])
+        ->middleware('throttle:20,1') // coarse per-IP cap; AuthController adds per-username limiting
+        ->name('authentication.login.submit');
+
     Route::get('/signup', [AuthController::class, 'showSignup'])->name('authentication.signup');
-    Route::post('/signup', [AuthController::class, 'signup'])->name('authentication.signup.submit');
+    Route::post('/signup', [AuthController::class, 'signup'])
+        ->middleware('throttle:5,1') // stops bots mass-creating accounts
+        ->name('authentication.signup.submit');
 });
 
 // ============================================================
@@ -66,7 +71,8 @@ Route::prefix('staff')
         Route::get('/orders', 'orders')->name('orders');
         Route::post('/orders', 'storeOrder')->name('orders.store');
 
+        Route::get('/receipts', 'receipts')->name('receipts');
+
         Route::get('/inventory', 'inventory')->name('inventory');
-        Route::post('/inventory/{ingredient}/restock', 'restock')->name('inventory.restock');
         Route::post('/inventory/action', 'handleInventoryAction')->name('inventory.action');
     });

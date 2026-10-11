@@ -22,7 +22,7 @@
                 <!-- Quick Filter Tabs -->
                 <div class="inventory-tab-row">
                     <button type="button" class="inventory-tab-btn" id="tabRunningLow">
-                        Running low <span id="runningLowBadge" class="badge badge--out inventory-tab-badge">0</span>
+                        Stock Alert <span id="runningLowBadge" class="badge badge--out inventory-tab-badge">0</span>
                     </button>
                     <button type="button" class="inventory-tab-btn is-active" id="tabAllItems">
                         All items
@@ -40,6 +40,7 @@
                         <label for="stockStatusFilter" class="inventory-filter-label">Stock status</label>
                         <select class="field inventory-filter-input" id="stockStatusFilter">
                             <option value="all">All statuses</option>
+                            <option value="alert">Stock Alert</option>
                             <option value="low">Running low</option>
                             <option value="healthy">Healthy</option>
                             <option value="out">Out of stock</option>
@@ -108,8 +109,12 @@
                 <button type="button" class="close staff-modal-close" id="btnCloseModal">&times;</button>
             </div>
             
-            <form method="POST" action="{{ route('staff.inventory.action') }}" class="staff-modal-form">
+            <form method="POST" action="{{ route('staff.inventory.action') }}" class="staff-modal-form" id="staffActionForm">
                 @csrf
+
+                <!-- In-Modal Notice Bar for Inline Validation -->
+                <div id="staffModalNotice" style="display: none; padding: 10px 12px; border-radius: 6px; font-size: 12.5px; font-weight: 600;"></div>
+
                 <div class="form-group-block">
                     <span class="form-group-label">Action Type</span>
                     <select class="field form-field-tall" name="action_type" id="staffActionType">
@@ -122,8 +127,8 @@
                     <span class="form-group-label">Select Ingredient</span>
                     <select class="field form-field-standard" name="ingredient_id" id="staffIngSelect" required>
                         @foreach($ingredients as $ing)
-                            <option value="{{ $ing->id }}" data-unit="{{ $ing->unit }}">
-                                {{ $ing->name }} (Available: {{ rtrim(rtrim(number_format($ing->stock, 2), '0'), '.') }} {{ $ing->unit }})
+                            <option value="{{ $ing->id }}" data-unit="{{ $ing->unit }}" data-stock="{{ $ing->stock }}" data-disabled="{{ $ing->is_disabled ? '1' : '0' }}">
+                                {{ $ing->name }} (Available: {{ rtrim(rtrim(number_format($ing->stock, 2), '0'), '.') }} {{ $ing->unit }}){{ $ing->is_disabled ? ' - [Disabled]' : '' }}
                             </option>
                         @endforeach
                     </select>
@@ -132,7 +137,7 @@
                 <div class="form-row-split">
                     <div class="form-col-flex">
                         <span id="modalQtyLabel" class="form-group-label">Quantity</span>
-                        <input type="number" step="any" min="0.01" class="field form-field-standard" name="quantity" placeholder="e.g. 500" required>
+                        <input type="number" step="any" min="0.01" class="field form-field-standard" name="quantity" id="staffQtyInput" placeholder="e.g. 500" required>
                     </div>
 
                     <div class="form-col-flex" id="unitSelectGroup">
@@ -144,7 +149,7 @@
 
                     <div id="staffReasonGroup" class="form-col-flex" hidden>
                         <span class="form-group-label">Reason for Stock-Out</span>
-                        <select class="field form-field-standard" name="reason">
+                        <select class="field form-field-standard" name="reason" id="staffReasonSelect">
                             <option value="spoilage">Expired / Spoiled</option>
                             <option value="spill">Spilled / Prep Mistake</option>
                             <option value="damage">Damaged Delivery</option>
@@ -153,37 +158,84 @@
                     </div>
                 </div>
 
-                <!-- Modal Action Buttons (Clean & Aligned) -->
+                <!-- Modal Action Buttons -->
                 <div class="staff-modal-actions">
                     <button type="button" class="btn btn--ghost" id="btnCancelModal">Cancel</button>
-                    <button type="submit" class="btn" id="btnSubmitAction">Confirm Stock-In</button>
+                    <button type="button" class="btn" id="btnSubmitAction">Confirm Stock-In</button>
                 </div>
             </form>
         </div>
     </div>
 
+    <!-- Confirmation Modal Dialogue -->
+    <div class="backdrop" id="confirmActionModal">
+        <div class="modal modal--single">
+            <div style="text-align: center;">
+                <div style="font-size: 32px; margin-bottom: 6px;">📦</div>
+                <h2 style="font-size: 18px; margin: 0 0 4px; border-bottom: none; padding: 0;">Confirm Stock Movement</h2>
+                <p style="margin: 0 0 12px; font-size: 12.5px; color: var(--ink-soft);" id="confirmActionSubtext">Please verify details before proceeding</p>
+
+                <div style="margin: 12px 0; padding: 14px; background: #fdf6ee; border-radius: 8px; border: 1px solid #d9c9b8;">
+                    <p id="confirmActionSummary" style="font-size: 15px; font-weight: 700; color: var(--bar); margin: 0;"></p>
+                    <p id="confirmActionDetail" style="font-size: 12px; margin: 4px 0 0; color: var(--ink-soft);"></p>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 8px; margin-top: 14px;">
+                <button type="button" class="btn btn--ghost" id="btnCancelActionConfirm" style="flex: 1; margin: 0;">Cancel</button>
+                <button type="button" class="btn btn--primary" id="btnProceedActionConfirm" style="flex: 1; margin: 0;">Okay, Submit</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Success Dialogue Modal -->
+    <div class="backdrop" id="staffSuccessModal">
+        <div class="modal modal--single" style="text-align: center;">
+            <div style="font-size: 36px; margin-bottom: 6px;">✅</div>
+            <h2 style="font-size: 18px; margin: 0 0 4px; border-bottom: none; padding: 0; color: var(--good, #46703f);" id="staffSuccessTitle">Stock Updated!</h2>
+            <p style="margin: 6px 0 14px; font-size: 13px; color: var(--ink-soft);" id="staffSuccessText">Inventory changes were recorded successfully.</p>
+
+            <div style="margin-top: 8px;">
+                <button type="button" class="btn btn--primary" id="btnStaffSuccessDone" style="margin: 0; width: 100%;">Done</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Error Dialogue Modal -->
+    <div class="backdrop" id="staffErrorModal">
+        <div class="modal modal--single" style="text-align: center;">
+            <div style="font-size: 36px; margin-bottom: 6px;">⚠️</div>
+            <h2 style="font-size: 18px; margin: 0 0 4px; border-bottom: none; padding: 0; color: var(--flag, #a63d2a);" id="staffErrorTitle">Operation Failed</h2>
+            <p style="margin: 6px 0 14px; font-size: 13px; color: var(--ink-soft);" id="staffErrorText">An error occurred while updating the inventory.</p>
+
+            <div style="margin-top: 8px;">
+                <button type="button" class="btn btn--primary" data-close-modal="staffErrorModal" style="margin: 0; width: 100%;">Understood</button>
+            </div>
+        </div>
+    </div>
+
 @push('scripts')
-        <script src="{{ asset('js/Staff.js') }}"></script>
-        <script>
-            window.KAPE_STAFF_INV = {
-                ingredients: {!! json_encode($ingredients->map(fn($i) => [
-                    'id'                => $i->id,
-                    'key'               => $i->key,
-                    'name'              => $i->name,
-                    'unit'              => $i->unit,
-                    'purchase_unit'     => $i->purchase_unit ?? $i->unit,
-                    'conversion_factor' => (float) ($i->conversion_factor ?? 1.00),
-                    'stock'             => (float) $i->stock,
-                    'reorder'           => (float) $i->reorder_level,
-                    'used_today'        => (float) ($i->used_today ?? 0),
-                    'cost'              => (float) $i->cost,
-                    'is_disabled'       => isset($i->is_active) ? !$i->is_active : false
-                ])) !!}
-            };
-            document.addEventListener('DOMContentLoaded', () => {
-                initStaffInventory();
-            });
-        </script>
-    @endpush
+    <script src="{{ asset('js/Staff.js') }}"></script>
+    <script>
+        window.KAPE_STAFF_INV = {
+            ingredients: {!! json_encode($ingredients->map(fn($i) => [
+                'id'                => $i->id,
+                'key'               => $i->key,
+                'name'              => $i->name,
+                'unit'              => $i->unit,
+                'purchase_unit'     => $i->purchase_unit ?? $i->unit,
+                'conversion_factor' => (float) ($i->conversion_factor ?? 1.00),
+                'stock'             => (float) $i->stock,
+                'reorder'           => (float) $i->reorder_level,
+                'used_today'        => (float) ($i->used_today ?? 0),
+                'cost'              => (float) $i->cost,
+                'is_disabled'       => (bool) $i->is_disabled
+            ])) !!}
+        };
+        document.addEventListener('DOMContentLoaded', () => {
+            initStaffInventory();
+        });
+    </script>
+@endpush
 
 </x-staff.shell>
