@@ -6,11 +6,6 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-/**
- * Tells the browser never to store these pages. Without this, pressing Back
- * after logout shows the old dashboard from the browser cache (the server is
- * never asked, so no auth check runs).
- */
 class NoCacheHeaders
 {
     public function handle(Request $request, Closure $next): Response
