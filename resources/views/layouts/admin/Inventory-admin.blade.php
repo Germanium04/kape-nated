@@ -200,5 +200,5 @@
         </script>
     @endpush
 
-@extends('layouts.admin.Shell')
+
 </x-admin.shell>

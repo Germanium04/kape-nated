@@ -89,5 +89,6 @@
 <script src="{{ asset('js/Authenticate.js') }}"></script>
 <script src="{{ asset('js/admin.js') }}"></script>
 @stack('scripts')
+
 </body>
 </html>
