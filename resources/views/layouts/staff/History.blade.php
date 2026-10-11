@@ -28,7 +28,7 @@
     <main class="wrap">
         <div class="page-head">
             <h1>Transaction History</h1>
-            <p class="page-sub">{{ $branch ?? 'No branch assigned' }} · every sale rung up at your branch</p>
+            <p class="page-sub">{{ $branch ?? 'No branch assigned' }} · your sales only</p>
         </div>
 
         @unless($branch)
@@ -138,72 +138,71 @@
             </section>
 
             <style>
-                .receipt { background: #fff; border: 1px dashed var(--line-soft); border-radius: var(--radius-sm); padding: 16px; }
-                .receipt-top { text-align: center; border-bottom: 1px dashed var(--line-soft); padding-bottom: 10px; margin-bottom: 10px; }
-                .receipt-brand { font-size: 18px; margin: 0; }
-                .receipt-addr { font-size: 12px; color: var(--ink-soft); margin: 2px 0 0; }
-                .receipt-meta { margin: 0 0 10px; }
-                .receipt-meta div { display: flex; justify-content: space-between; gap: 8px; font-size: 13.5px; padding: 2px 0; }
-                .receipt-meta dt { color: var(--ink-soft); }
-                .receipt-meta dd { margin: 0; font-weight: 600; text-align: right; }
+                /* Receipt styling — exact copy of Admin.css receipt block so the
+                   staff History receipt matches the admin design. */
+                .receipt {
+                    background: #fffdf7;
+                    border: 1px solid var(--line-soft);
+                    border-radius: 4px;
+                    padding: 18px 20px;
+                    font-size: 13px;
+                    width: 100%;
+                    box-sizing: border-box;
+                }
+                .receipt-top { text-align: center; padding-bottom: 10px; }
+                .receipt-brand { font-family: 'Baloo 2', sans-serif; font-size: 21px; margin: 0; }
+                .receipt-addr { margin: 2px 0 0; color: var(--ink-soft); font-size: 12px; }
+                .receipt-meta {
+                    margin: 0;
+                    padding: 10px 0;
+                    border-top: 1px dashed var(--line-soft);
+                    border-bottom: 1px dashed var(--line-soft);
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 4px 12px;
+                    font-size: 12.5px;
+                }
+                .receipt-meta div { display: flex; gap: 6px; }
+                .receipt-meta dt { color: var(--ink-soft); margin: 0; }
+                .receipt-meta dd { margin: 0; font-weight: 600; }
                 .receipt-lines { width: 100%; border-collapse: collapse; margin: 10px 0; }
-                .receipt-lines td { padding: 4px 0; vertical-align: top; font-size: 13.5px; }
-                .rl-qty { width: 40px; color: var(--ink-soft); }
-                .rl-opt { display: block; color: var(--ink-soft); font-size: 12px; }
+                .receipt-lines td { padding: 4px 0; vertical-align: top; }
+                .rl-qty { width: 34px; color: var(--ink-soft); }
                 .rl-amt { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
-                .receipt-sums { border-top: 1px dashed var(--line-soft); padding-top: 8px; font-size: 13.5px; }
-                .receipt-sums p { display: flex; justify-content: space-between; margin: 2px 0; }
-                .receipt-total { font-size: 17px; font-weight: 700; }
-                .receipt-foot { text-align: center; color: var(--ink-soft); font-size: 13px; margin: 10px 0 0; }
+                .rl-opt { display: block; color: var(--ink-soft); font-size: 12px; }
+                .receipt-sums { border-top: 1px dashed var(--line-soft); padding-top: 8px; }
+                .receipt-sums p { display: flex; justify-content: space-between; margin: 3px 0; font-variant-numeric: tabular-nums; }
+                .receipt-total {
+                    font-family: 'Baloo 2', sans-serif;
+                    font-size: 17px;
+                    border-top: 1px solid var(--line);
+                    margin-top: 8px !important;
+                    padding-top: 6px;
+                }
+                .receipt-foot { text-align: center; color: var(--ink-soft); margin: 14px 0 0; font-size: 12px; }
+
+                /* History receipt modals: single-column, auto height, scrollable.
+                   (The base .modal is a 2-column grid with fixed height built for
+                   the order customizer — it squeezed and clipped the receipt.) */
+                .backdrop[id^="history-"] .modal {
+                    display: flex !important;
+                    flex-direction: column !important;
+                    grid-template-columns: none !important;
+                    width: min(460px, 92vw) !important;
+                    height: auto !important;
+                    max-height: 85vh;
+                }
+                .backdrop[id^="history-"] .modal .body {
+                    overflow-y: auto;
+                }
             </style>
 
             @foreach($orders as $order)
-                @php
-                    $rSubtotal = 0;
-                    foreach ($order['items'] as $line) {
-                        $rSubtotal += $line['qty'] * ($line['price'] + count($line['addons']) * 20);
-                    }
-                    $rVat = round($rSubtotal * 0.12, 2);
-                @endphp
                 <x-staff.modal :id="'history-' . $order['uid']">
                     <h2 id="history-{{ $order['uid'] }}-title">Receipt #{{ $order['no'] }}</h2>
-                    <div class="receipt">
-                        <div class="receipt-top">
-                            <p class="receipt-brand">kape&#8209;nated</p>
-                            <p class="receipt-addr">Mabini, Davao de Oro &middot; 0917 000 0000</p>
-                        </div>
-                        <dl class="receipt-meta">
-                            <div><dt>Order no.</dt><dd>{{ $order['no'] }}</dd></div>
-                            <div><dt>Date</dt><dd>{{ $order['date'] }}</dd></div>
-                            <div><dt>Branch</dt><dd>{{ $order['branch'] }}</dd></div>
-                            <div><dt>Cashier</dt><dd>{{ $order['staff'] }}</dd></div>
-                            <div><dt>Payment</dt><dd>{{ $order['payment'] }}</dd></div>
-                            @if(strtolower($order['payment'] ?? '') === 'gcash')
-                                <div><dt>GCash Ref</dt><dd>{{ $order['gcash_ref'] ?? '—' }}</dd></div>
-                            @endif
-                        </dl>
-                        <table class="receipt-lines">
-                            @foreach($order['items'] as $line)
-                                <tr>
-                                    <td class="rl-qty">{{ $line['qty'] }}&times;</td>
-                                    <td class="rl-name">
-                                        {{ $line['name'] }}
-                                        <span class="rl-opt">{{ $line['temp'] }}@if($line['addons']), {{ implode(', ', $line['addons']) }}@endif</span>
-                                    </td>
-                                    <td class="rl-amt">{{ number_format($line['qty'] * ($line['price'] + count($line['addons']) * 20), 2) }}</td>
-                                </tr>
-                            @endforeach
-                        </table>
-                        <div class="receipt-sums">
-                            <p><span>Subtotal</span><span>₱{{ number_format($rSubtotal, 2) }}</span></p>
-                            <p><span>VAT included (12%)</span><span>₱{{ number_format($rVat, 2) }}</span></p>
-                            <p class="receipt-total"><span>Total</span><span>₱{{ number_format($rSubtotal, 2) }}</span></p>
-                        </div>
-                        <p class="receipt-foot">Salamat! Balik kayo.</p>
-                    </div>
-                    <div style="display: flex; gap: 8px; margin-top: 14px;">
-                        <button type="button" class="btn btn--ghost" data-close-modal="history-{{ $order['uid'] }}" style="flex: 1; margin: 0;">Close</button>
-                        <button type="button" class="btn btn--primary" onclick="window.print()" style="flex: 1; margin: 0;">Print receipt</button>
+                    <x-admin.receipt :order="$order" />
+                    <div style="margin-top: 14px;">
+                        <button type="button" class="btn btn--ghost" data-close-modal="history-{{ $order['uid'] }}" style="width: 100%; margin: 0;">Close</button>
                     </div>
                 </x-staff.modal>
             @endforeach

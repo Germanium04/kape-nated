@@ -22,7 +22,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700&family=Karla:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" href="{{ asset('style/Staff.css') }}">
+    <link rel="stylesheet" href="{{ asset('style/Staff.css') }}?v={{ @filemtime(public_path('style/Staff.css')) }}">
 </head>
 <body>
 

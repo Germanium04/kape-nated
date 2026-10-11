@@ -328,6 +328,7 @@ class StaffController extends Controller
         if ($branchId) {
             $live = Order::with(['staff', 'items.menuItem', 'items.addons'])
                 ->where('branch_id', $branchId)
+                ->where('user_id', $user->id)
                 ->latest()
                 ->limit(300)
                 ->get()
@@ -363,6 +364,7 @@ class StaffController extends Controller
 
             $demo = collect(DemoData::orders())
                 ->filter(fn ($o) => ($o['branch'] ?? '') === $branch)
+                ->filter(fn ($o) => strcasecmp($o['staff'] ?? '', (string) $user->name) === 0)
                 ->map(fn ($o) => [
                     'uid'       => 'demo-' . $o['no'],
                     'no'        => $o['no'],

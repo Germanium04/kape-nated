@@ -1505,16 +1505,17 @@ a { color: inherit; }
 
     /* Receipt-only printing: when a receipt modal is open, hide the page
        content but keep the modal so Print receipt outputs just the receipt.
-       (The modals are direct children of .page, so spare them from the wipe.) */
-    body:has(.modal:not([hidden]):has(.receipt)) .topbar {
+       (The modals are direct children of .page, so spare them from the wipe.
+       NB: no nested :has() — browsers drop such rules as invalid.) */
+    body:has(.modal:not([hidden]) .receipt) .topbar {
         display: none !important;
     }
 
-    body:has(.modal:not([hidden]):has(.receipt)) .page > :not(.modal) {
+    body:has(.modal:not([hidden]) .receipt) .page > :not(.modal) {
         display: none !important;
     }
 
-    body:has(.modal:not([hidden]):has(.receipt)) .page {
+    body:has(.modal:not([hidden]) .receipt) .page {
         padding: 0 !important;
         max-width: 100% !important;
     }

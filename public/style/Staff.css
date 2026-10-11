@@ -678,12 +678,13 @@ a.btn { display: inline-block; text-align: center; text-decoration: none; }
     }
 
     /* Receipt-only printing: when a receipt modal is open (History/Dashboard
-       modals use .backdrop.open), reveal just the receipt itself. */
-    body:has(.backdrop.open:has(.receipt)) .receipt,
-    body:has(.backdrop.open:has(.receipt)) .receipt * {
+       modals use .backdrop.open), reveal just the receipt itself.
+       NB: no nested :has() — browsers drop such rules as invalid. */
+    body:has(.backdrop.open .receipt) .receipt,
+    body:has(.backdrop.open .receipt) .receipt * {
         visibility: visible !important;
     }
-    body:has(.backdrop.open:has(.receipt)) .receipt {
+    body:has(.backdrop.open .receipt) .receipt {
         position: fixed;
         left: 0;
         top: 0;
