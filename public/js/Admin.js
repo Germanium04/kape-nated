@@ -39,7 +39,7 @@ const peso = (n) => '₱' + Math.round(n || 0).toLocaleString('en-PH');
 const pesoDec = (n) => '₱' + (n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 /* -------------------------------------------------------------------------
-   3. RECEIPTS & TRANSACTIONS MODULE (PAGINATED)
+   3. RECEIPTS & TRANSACTIONS MODULE
    ------------------------------------------------------------------------- */
 function initReceipts() {
     const table = document.getElementById('receiptTable');
