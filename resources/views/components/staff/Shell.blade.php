@@ -63,7 +63,6 @@
 <script src="{{ asset('js/Authenticate.js') }}"></script>
 
 <script>
-    // User menu: opens on click, closes on outside click or Esc.
     (() => {
         const btn  = document.getElementById('userMenuBtn');
         const menu = document.getElementById('userDropdown');
