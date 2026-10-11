@@ -218,5 +218,5 @@
     </script>
     @endpush
 
-
+    
 </x-staff.shell>
